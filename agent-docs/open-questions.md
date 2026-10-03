@@ -14,7 +14,6 @@ Ask the owner when a question blocks work; move answered items to
   Still open: does the upstream recipe verify today?
 - **Q8 — Is C2PO (compiler) in scope**, e.g. its rewrite rules
   (`Rewrite_Rules_and_Proofs.thy`)?
-- **Q9 — `ROOT/sabre/`** relevance to this project.
 - **Q10 — Fork URLs** (D9). Owner to create forks of `R2U2/r2u2` and (if a
   fork rather than a branch is wanted for an owner-owned repo)
   `zwang271/WEST`, and give URLs. Blocks T6.1, T8.1-onward.

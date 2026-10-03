@@ -139,7 +139,5 @@ is "basically R2U2", since SCQs are circular buffers. Answer recorded:
 
 ## 8. Pending follow-ups
 
-- `src/mltl-eval/EVAL_MLTL.md` §6, final paragraph ("The two ideas also
-  combine…") presents the sliding window as a hybrid without saying how
-  close it is to R2U2. Agent offered to rewrite it with §6 above; owner did
-  not take it up. Tracked in `../human-doc-backlog.md`.
+(none: the human doc was shortened 2026-10-03 and no longer discusses the
+  streaming hybrid; §6 above is the reference.)

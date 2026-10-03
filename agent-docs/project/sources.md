@@ -104,7 +104,10 @@ semantics diverge.
   `run_r2u2.py`, `verify_r2u2.py` (conformance testing).
 - `ROOT/formula_progression_api/`: a deployed API around exported formula
   progression code (has `codegen/`).
-- `ROOT/sabre/`: submodule `github.com/cgjohannsen/sabre` (unrelated? UNKNOWN).
+- `ROOT/sabre/`: SABRe (`github.com/cgjohannsen/sabre`, `c7b059eb`), an MLTL
+  runtime monitor that generates C code evaluating formulas with bitwise
+  operations over machine words of time steps. Prior art that our
+  evaluators must not reproduce (D32).
 
 ## REU 2026 Isabelle work — `REU/isabelle/` (unpublished; surveyed 2026-10-02, commit `14fdbbe`)
 - `MLTL_Properties_Extended.thy` (2479 lines): extra equivalences, CE lemmas,

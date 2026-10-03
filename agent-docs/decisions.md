@@ -4,7 +4,7 @@ What is currently decided, grouped by topic, with the reason. This is a
 register, not a log: when a decision changes, edit the entry; delete entries
 that no longer matter (git keeps the history). Each entry is a few lines:
 the decision, why, and what it means for future work. IDs are stable anchors
-for cross-references; give new entries the next free number (next: D32).
+for cross-references; give new entries the next free number (next: D33).
 
 ## Repository, docs and process
 
@@ -98,9 +98,10 @@ for cross-references; give new entries the next free number (next: D32).
   `mltl_eval_bottom_up` (tables per subformula over the positions that
   matter, plus next-true/next-false arrays). Both are proved equal to
   `semantics_mltl`. The owner-requested human doc `src/mltl-eval/EVAL_MLTL.md`
-  explains both and compares bottom-up with R2U2 (both are bounded by the
-  formula for the verdict at position 0; R2U2 also streams in bounded
-  memory).
+  explains both briefly, with one worked example each, and compares them
+  with R2U2. Owner wants it short (about 100 lines). Depth (cost
+  recurrences, R2U2 memory analysis) lives in agent-docs:
+  `modules/mltl-eval.md`, `project/sources.md`, `project/m10-batched-eval.md`.
 - **D24 — Benchmark suite.** `src/mltl-eval/benchmarks/` compares both
   evaluators with libmltl and R2U2's Rust monitor (submodules
   `external/libmltl`, `external/r2u2`) on identical input files.
@@ -120,6 +121,14 @@ for cross-references; give new entries the next free number (next: D32).
   turns out slower or still improvable. Each iteration's lessons are kept in
   `modules/mltl-eval.md`, so that if a proof forces a change we know which
   fix costs the least speed.
+- **D32 — Only the trace representation changes; no bitwise-over-time
+  evaluation.** The next optimisation replaces how atoms are read from the
+  trace (bit row per atom instead of a hash set per step). It does not
+  change how tables or intervals are computed: no bit-packed tables, no
+  shift-and-combine windows. Reason (owner): SABRe (R2U2 group, "Stream
+  Analyzer via Bitwise Reasoning", `ROOT/sabre`) already evaluates MLTL with
+  bitwise operations over words of time steps. We must not reproduce it,
+  and we want to measure what the representation change alone buys.
 - **D28 — Batched evaluator shelved.** The bit-parallel, many-traces-at-once
   evaluator is designed but shelved by the owner. Everything needed to
   resume is in `project/m10-batched-eval.md`. On resume, offer an unverified
