@@ -1,0 +1,18 @@
+# Trusted base ledger
+
+Every trusted item in `rust-mltl/` code MUST appear here (AGENTS.md §4):
+`assume`, `admit`, axioms, `#[verifier::external_body]`, `#[verifier::external]`,
+`uninterp` specs, trusted `vstd` extensions, unverified build/parse steps.
+
+| ID | Location (file:item) | Kind | What is trusted | Why | Plan to discharge |
+|---|---|---|---|---|---|
+
+(empty — no code yet, 2026-10-02)
+
+## Upstream trust inherited by in-place targets
+Track separately once R2U2/WEST are brought in. Known for `r2u2_core` as of
+2026-10-02 (from upstream source, not yet audited): several
+`#[verifier::external]` fns in `memory/scq.rs`, `internals/types.rs`,
+`engines/booleanizer.rs` (floats; `&mut` deref of
+`monitor.queue_arena.control_blocks`; writes to `monitor.value_buffer`).
+Always trusted: Verus itself, Z3, rustc, `vstd`.

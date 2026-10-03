@@ -1,0 +1,12 @@
+# Local-only docs (D5, D6 in agent-docs/decisions.md)
+/CLAUDE.md
+/PLAN.md
+
+# Rust / Cargo
+/target/
+**/*.rs.bk
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/

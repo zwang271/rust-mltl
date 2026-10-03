@@ -1,0 +1,202 @@
+# Detailed work plan (agent-facing)
+
+Status: PROPOSED 2026-10-02, awaiting owner review. Human summary: `../../PLAN.md`
+(keep the two in sync — if you change milestones/order here, log a backlog item
+in `../human-doc-backlog.md` for `PLAN.md`). Coarse phases: `roadmap.md`.
+
+Conventions: task IDs `T<milestone>.<n>`; size S (≤1 day agent work), M (days),
+L (week+), XL (multi-week, split further when started). "Exit" = the condition
+that marks the milestone done. Every task ends with the INDEX.md maintenance
+checklist.
+
+## Ordering and dependencies
+
+```
+M0 decisions ─┬─> M1 toolchain ─> M2 mltl-core ─┬─> M4 progression
+              │                                  ├─> M3 parser (needs Q6)
+              │                                  ├─> M5 lang-partition
+              ├─(Q1,Q2)──────────────────────────┼─> M6 WEST in place
+              ├─(Q3)─────────────────────────────┼─> M7 SAT
+              └─(Q1,Q4,Q7)─> T8.1–T8.3 (survey) ─┴─> M8 R2U2 in place
+M9 cross-cutting runs alongside from M2 on.
+```
+
+Recommended order: M1 → M2 → M4 → M3 → M5, with M6/M7/M8 surveys started as
+soon as their questions are answered. Rationale: formula progression is the
+smallest algorithm (2.3k Isabelle lines, no extra datatypes) and stress-tests
+the core design before the big ones (LP proof 6.7k lines, WEST proofs 6k, R2U2).
+
+## M0 — Owner decisions (blocking)
+Map to `../open-questions.md`. None needs code; all need the owner.
+- T0.1 Q4 Verus version: match `r2u2_core` pin (`vstd 0.0.0-2025-08-12-1837`,
+  rust 1.85.1) or latest + bump upstream. Recommendation: latest for
+  rust-mltl; reproduce the pin separately in T8.1. Blocks M1.
+- T0.2 Q1 in-place mechanism for R2U2/WEST. Recommendation: git submodule of a
+  fork, on a `verus` branch, under `vendor/` (keeps upstreaming possible).
+  Blocks M6, M8.
+- T0.3 Q2 WEST repo URL. Blocks M6.
+- T0.4 Q3 SAT solver theory location. Blocks M7.
+- T0.5 Q6 parser concrete syntax(es). Blocks M3.
+- T0.6 Q7 R2U2 target theorem. Blocks T8.4+.
+- T0.7 Priority order across M3–M8 (owner may override the recommendation).
+
+## M1 — Toolchain and skeleton
+- T1.1 (S) Install Verus release binary (bundles Z3) per T0.1; record exact
+  version, install path, rustup toolchain in `../verification/verus-notes.md`.
+- T1.2 (S) Decide `cargo verus` vs raw `verus` invocation; root `Cargo.toml`
+  workspace with members under `src/`; a `scripts/verify.sh` that verifies all
+  crates and exits non-zero on failure.
+- T1.3 (S) Trivial crate `src/mltl-core` with one verified lemma; verify
+  passes. Create `src/mltl-core/README.md` (AGENTS.md §3.3).
+- T1.4 (M) Feasibility spikes, each recorded in verus-notes (works / fails +
+  error text):
+  - recursive enum with `Box` children: spec fn with `decreases`, exec fn
+    over it, `height`/`size` measures;
+  - generic atom type `A` with `Set<A>` in spec and something executable
+    (`Vec<A>` with `A: Eq`? bitset for `nat` atoms?);
+  - spec fn over `Seq<Set<A>>` with nat arithmetic (truncating `b-1`);
+  - `Vec<Vec<bool>>`/bitvector trace with `view()` to `Seq<Set<nat>>`.
+- Exit: one command verifies the workspace; spike results documented.
+
+## M2 — mltl-core (goal 1, 2)
+Source: AFP `Mission_Time_LTL` (`MLTL_Encoding.thy`, `MLTL_Properties.thy`).
+Create `../correspondence/mission-time-ltl.md` and `../modules/mltl-core.md`
+at T2.1.
+- T2.1 (S) Design decision (record as D-entry): one `Formula<A>` enum used in
+  both spec and exec, bounds `usize`/`u64` viewed as `nat`, vs. separate
+  spec/exec types with `view`. Prefer one type unless T1.4 shows a problem.
+- T2.2 (S) Syntax: 10 constructors mirroring `'a mltl`; `implies_mltl`,
+  `iff_mltl` as spec fns (Isabelle definitions, not constructors).
+- T2.3 (M) `semantics_mltl` spec over `Seq<Set<A>>`, case-for-case (incl.
+  `Prop` needs nonempty trace, F/U need `len > a`, G/R vacuous when `len ≤ a`,
+  R's `b-1`). Port the `value`/example lemmas from `MLTL_Encoding.thy` as
+  proof tests.
+- T2.4 (M) Spec fns: `intervals_welldef`, `semantic_equiv`, `depth_mltl`,
+  `subformulas`, `convert_nnf`, `complen_mltl`, `make_empty_trace`.
+- T2.5 (M) Downstream lemma inventory: grep `WEST_Proofs`,
+  `MLTL_Formula_Progression`, `MLTL_Language_Partition_Proof`, and local
+  `ROOT/isabelle/*.thy` for uses of `MLTL_Properties` lemmas; list them in the
+  correspondence page with a priority (used by N downstream theories).
+- T2.6 (L) Port prioritized lemmas; must-haves: `convert_nnf` preserves
+  semantics + well-definedness, `semantic_equiv` is an equivalence, complen
+  facts. Lemmas never used downstream → SKIPPED unless cheap.
+- T2.7 (M) Exec: `convert_nnf` exec ensures `== spec`; `eval(trace, f) -> bool`
+  proved equal to `semantics_mltl` (first real exec-vs-spec proof; also a test
+  oracle for everything after). Overflow preconditions on bounds documented.
+- T2.8 (S) Generic-vs-`nat` instantiation story written down (WEST/R2U2 use
+  `nat` atoms).
+- Exit: all `MLTL_Encoding` + listed `MLTL_Properties` items `VERIFIED` or
+  `SKIPPED` with reason; zero unrecorded trust.
+
+## M3 — Verified parser/printer (goal 6)
+Blocked by T0.5. Create `correspondence/parser.md`, `modules/mltl-parse.md`.
+- T3.1 (S) Write the grammar (precedence, associativity, interval syntax,
+  atom syntax, whitespace) as a doc page; compare with the lark grammar in
+  `ROOT/experiments/run_r2u2_sml.py` and whatever WEST/C2PO accept.
+- T3.2 (M) Spec: spec printer `print(f): Seq<char>` (fully or minimally
+  parenthesised) + spec of the accepted language. Correctness statements:
+  (a) `parse(print(f)) == Some(f)`; (b) `parse(s) == Some(f) ==> s` is in the
+  language and denotes `f` (soundness); (c) completeness for the grammar.
+- T3.3 (M) Exec lexer + recursive-descent parser over `&[u8]`/`&str`;
+  termination via input length; error type.
+- T3.4 (L) Proofs of (a)–(c). Fallback if (c) is costly: prove (a)+(b), record
+  (c) as PLANNED.
+- T3.5 (S) Exec printer proved equal to spec printer.
+- T3.6 (S) Differential test vs the lark parser on a corpus (existing
+  experiment formulas + random generation).
+- Exit: parser/printer `VERIFIED` for (a),(b); goal 6 done for text syntax.
+  R2U2 binary format is T8.9.
+
+## M4 — Formula progression (goal 5)
+Source: AFP `MLTL_Formula_Progression.thy` (2285 lines); also local
+`ROOT/isabelle/Formula_Progression_Extended.thy` (1612, sorry-free).
+- T4.1 (S) Correspondence page; list defs: `weight_operators`,
+  `formula_progression_len1`, `formula_progression`; theorems:
+  `formula_progression_decomposition`, `satisfiability_preservation`,
+  `formula_progression_correctness(_alt)`.
+- T4.2 (M) Spec fns, with the same termination measure as Isabelle's
+  `function` proof (check its `termination` block).
+- T4.3 (M) Exec impl, proved equal to spec; avoid exponential cloning
+  (consider `Rc`/arena only if Verus supports it — record).
+- T4.4 (L) Port the main theorems (and helper lemmas they need).
+- T4.5 (S) Optional: port useful lemmas from `Formula_Progression_Extended`.
+- T4.6 (S) Benchmark vs `ROOT/formula_progression_api` exported code.
+- Exit: correctness theorem `VERIFIED` against `mltl-core` semantics.
+
+## M5 — Language partitioning (goal 5)
+Source: AFP `MLTL_Language_Partition_*` (Algorithm 241 lines, Proof 6671).
+Large: split into sub-milestones.
+- T5.1 (S) Decide where `mltl_ext` lives (own crate vs core); record decision.
+- T5.2 (M) `mltl_ext`, `to_mltl`, `semantics_mltl_ext`, `convert_nnf_ext`;
+  lemma that `semantics_mltl_ext` agrees with core semantics via `to_mltl`.
+- T5.3 (M) Compositions: `partial_sum`, `interval_times`, `is_composition*`,
+  list builders (`And_mltl_list`, …), `Mighty_Release_mltl_ext`,
+  `Global_mltl_decomp`, `LP_mltl_aux`, `LP_mltl` — spec + exec.
+- T5.4 (XL) `LP_mltl_language_union(_explicit)`. Read the Isabelle proof
+  structure first and write a proof outline into `modules/lang-partition.md`.
+- T5.5 (XL) `LP_mltl_language_disjoint(_k)`.
+- T5.6 (S) Replace `MLTL_Language_Partition_Codegen` string printing with the
+  M3 printer.
+- Exit: union + disjointness `VERIFIED`.
+
+## M6 — WEST in place (goal 4)
+Blocked by T0.2, T0.3. Source: AFP `WEST_Algorithms.thy` (744),
+`WEST_Proofs.thy` (6024), `Regex_Equivalence.thy` (1202).
+- T6.1 (M) Bring the repo in per Q1; build it; survey its structure and map
+  each Rust fn to its `WEST_Algorithms` counterpart (or note divergence) in
+  `correspondence/west.md`. Note any input parser it has (goal 6 overlap).
+- T6.2 (M) Spec layer: Verus spec fns mirroring `WEST_Algorithms` (`WEST_bit`,
+  `match_timestep`, `match_regex`, `match`, `WEST_and*`, `WEST_simp*`,
+  `shift`, `pad`, `WEST_global/future/until/release`, `WEST_reg_aux`,
+  `WEST_reg`).
+- T6.3 (L) Refinement proofs bottom-up: bitwise → state → trace → regex →
+  simp → temporal ops → `WEST_reg`. Minimal, behavior-preserving source edits;
+  log every edit.
+- T6.4 (XL) Port the `WEST_Proofs` main correctness theorem (`WEST_reg`
+  matches exactly the traces satisfying the formula) against core semantics.
+- T6.5 (M, optional) `Regex_Equivalence`.
+- Exit: real WEST code `VERIFIED` correct w.r.t. `semantics_mltl`.
+
+## M7 — MLTL SAT solver
+Blocked by T0.4. T7.1 survey + correspondence page; then the same
+spec → exec → main-theorem pattern as M4. Sized after survey.
+
+## M8 — R2U2 in place (goal 3)
+Blocked by T0.2, T0.6. Sources: `ROOT/r2u2/monitors/rust/r2u2_core`,
+`ROOT/isabelle/R2U2_*.thy`, `ROOT/isabelle/explain_r2u2.md`, `ROOT/*_BUG.md`.
+- T8.1 (S) Reproduce upstream verification with its pinned toolchain and
+  recipe (`r2u2/monitors/rust/docs/dev/verification.md`); record pass/fail.
+- T8.2 (S) Audit existing specs. Known 2026-10-02: specs are per-operator
+  local properties (`previous.time`/`next_time` bookkeeping, `not` flips
+  truth) in `engines/mltl.rs` + `booleanizer.rs`; no link to MLTL semantics;
+  27 `#[verifier::external*]` (floats, div/mod, `&mut` arena deref,
+  `value_buffer` writes). Classify each external: removable / refactor needed /
+  must stay trusted. Copy into `verification/trusted-base.md` upstream section.
+- T8.3 (M) Read `explain_r2u2.md` + all `*_BUG.md`; write
+  `correspondence/r2u2.md` mapping `R2U2_Verdicts`, `R2U2_SCQ`,
+  `R2U2_Operators`, `R2U2_Function`, engine-step theories to Rust items.
+- T8.4 (S) Scope decision: MLTL engine first; booleanizer (floats) stays
+  trusted/out of scope initially.
+- T8.5 (L) Discharge `&mut` arena externals by minimal refactor (or newer Verus
+  support); SCQ invariants following `R2U2_SCQ.thy`.
+- T8.6 (L) Operator correctness on real code following `R2U2_Operators.thy`
+  (LOAD/NOT/AND/UNTIL, then release/since/trigger).
+- T8.7 (XL) Engine step + whole-monitor theorem per Q7 (refinement of
+  Isabelle model, or direct vs `semantics_mltl` under preconditions excluding
+  the documented bugs).
+- T8.8 (S) Bridge lemma from R2U2 verdict streams to `mltl-core` semantics.
+- T8.9 (L) Spec the C2PO binary format; verify `internals/process_binary.rs`
+  decoding (goal 6 for R2U2).
+- T8.10 (M) Upstream PRs to R2U2 (owner-driven).
+- Exit: MLTL engine of `r2u2_core` `VERIFIED` against the chosen theorem;
+  remaining externals all in the ledger with justification.
+
+## M9 — Cross-cutting (continuous)
+- T9.1 Differential testing: random formula + trace generator; compare our
+  exec code against Isabelle-exported SML/Haskell (`ROOT/experiments/`) — cheap
+  confidence before proofs land, and catches spec-transcription errors.
+- T9.2 CI (GitHub Actions or similar) running `scripts/verify.sh` + tests,
+  once a remote exists (owner).
+- T9.3 Trusted-base audit at each milestone exit.
+- T9.4 Verification-time budget: record per-crate times; split slow proofs.
+- T9.5 Benchmarks vs Isabelle-exported code for each algorithm.
