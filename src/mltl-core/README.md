@@ -10,7 +10,10 @@ It follows the AFP entry
 `MLTL_Encoding.thy` (datatype `mltl`, `semantics_mltl`) and
 `MLTL_Properties.thy`.
 
-Status: skeleton only (toolchain check). Verify with `scripts/verify.sh`.
+Status: syntax and semantics (`src/mltl.rs`, mirroring `MLTL_Encoding.thy`)
+are verified; `MLTL_Properties.thy` is in progress. One deliberate difference
+from Isabelle: each trace step is a *finite* set of atoms, since MLTL is a
+finite logic. Verify with `scripts/verify.sh`.
 
 Agent context: agent-docs/modules/mltl-core.md,
-agent-docs/correspondence/mission-time-ltl.md (created in milestone 2).
+agent-docs/correspondence/mission-time-ltl.md.

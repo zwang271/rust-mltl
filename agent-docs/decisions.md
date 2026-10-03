@@ -96,7 +96,7 @@ decision / consequences.
   M5 → M6/M8 as unblocked; M7 deferred (Q3). Parser also gives a convenient
   way to write test formulas for later milestones.
 
-## D13 (2026-10-02) — Trace states are `ISet<A>`
+## D13 (2026-10-02) — Trace states are `ISet<A>` — SUPERSEDED by D16
 - Context: vstd (0.0.0-2026-09-20) splits finite `Set` from possibly-infinite
   `ISet`. Isabelle `semantics_mltl :: 'a set list ⇒ ...` allows infinite sets.
 - Decision: spec traces are `Seq<ISet<A>>`, mirroring `'a set list` exactly.
@@ -109,3 +109,30 @@ decision / consequences.
 - Owner wants to reach mltl-core first. M6 (WEST) and M8 (R2U2) stay blocked
   on Q10 until revisited. Q11 (identifier rules): agent proposes in T3.1,
   owner confirms — agreed.
+
+## D15 (2026-10-02) — Formula type `Mltl<A>` (T2.1)
+- Decision: one generic enum `Mltl<A>` in `src/mltl-core/src/mltl.rs`, used by
+  both spec and exec code; named after Isabelle `'a mltl`, variants named after
+  the constructors minus the `_mltl` suffix. Interval bounds are `usize`,
+  read as `nat` in specs.
+- Why: T1.4 spike showed a single enum works in spec and exec; a separate
+  spec type with `nat` bounds would double every definition and need a view.
+- Divergence: bounds above `usize::MAX` are unrepresentable (Isabelle `nat`
+  is unbounded). Theorems quantify over `Mltl<A>`, so they cover only such
+  formulas — acceptable since exec code can't hold larger bounds anyway.
+  Arithmetic on bounds in specs is done in `nat`/`int` (no overflow); exec
+  code needs overflow preconditions.
+
+## D16 (2026-10-02) — Trace states are finite `Set<A>` (supersedes D13)
+- Owner decision: Isabelle's `'a set list` admitting infinite states is a
+  shortcoming of the formalization. Traces are finite lists of finite sets;
+  MLTL is a finite logic and everything about it should be finite.
+- Decision: spec traces are `Seq<Set<A>>` (vstd finite sets). Deliberate
+  divergence from Isabelle, recorded in `correspondence/mission-time-ltl.md`.
+- Consequences: Isabelle theorems quantifying over all traces still port (we
+  state them for a subset of traces). Watch for Isabelle proofs/definitions
+  that *build* traces with possibly-infinite states (complements, `UNIV`,
+  set comprehensions over infinite types): those need a finite replacement —
+  record each in the relevant correspondence page. Exec trace views must
+  produce finite sets (e.g. `Seq::to_set`, or `Set::new(..)` which returns
+  `Option` in this vstd). Lemma group: `vstd::set::group_set_lemmas`.

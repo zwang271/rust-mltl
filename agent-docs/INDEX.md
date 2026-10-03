@@ -19,8 +19,8 @@ Rules for maintaining this folder live in `../AGENTS.md` §3.1.
 | Verus toolchain, versions, how to run, Verus gotchas | `verification/verus-notes.md` |
 | Throwaway feasibility spikes (not built) | `verification/spikes/` |
 | Ledger of every trusted assumption (`assume`, `external_body`, …) | `verification/trusted-base.md` |
-| Isabelle ↔ Rust correspondence tables (one page per component) | `correspondence/` |
-| Per-module design notes (one page per `src/` module, created as modules appear) | `modules/` |
+| Isabelle ↔ Rust correspondence tables (one page per component) | `correspondence/` (exists: `mission-time-ltl.md`) |
+| Per-module design notes (one page per `src/` module, created as modules appear) | `modules/` (exists: `mltl-core.md`) |
 | Human-facing docs that need a human-approved update | `human-doc-backlog.md` |
 
 ## Status vocabulary

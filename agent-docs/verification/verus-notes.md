@@ -46,7 +46,8 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
 ## Gotchas (all observed with Verus 0.2026.09.27.3cf1832)
 - **`Set` is finite, `ISet` is possibly infinite.** In this vstd, `Set<A>` is
   finite-only and `Set::new(pred)` returns `Option<Set<A>>`. Isabelle's
-  `'a set` may be infinite → use `ISet<A>` for trace states (D13).
+  `'a set` may be infinite, but we use finite `Set<A>` for trace states by
+  owner decision (D16, supersedes D13). `ISet` notes kept for reference:
   `ISet::new`, `ISet::empty().insert(x)`; lemmas:
   `broadcast use vstd::iset::group_iset_lemmas;`. No `iset!` macro found.
 - **Don't put `#[trigger]` on a recursive call inside a recursive spec fn's

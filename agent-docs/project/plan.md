@@ -55,14 +55,14 @@ Q3 SAT source (deferred, blocks M7).
 Source: AFP `Mission_Time_LTL` (`MLTL_Encoding.thy`, `MLTL_Properties.thy`).
 Create `../correspondence/mission-time-ltl.md` and `../modules/mltl-core.md`
 at T2.1.
-- T2.1 (S) Design decision (record as D-entry): one `Formula<A>` enum used in
+- T2.1 DONE 2026-10-02 (D15). (S) Design decision (record as D-entry): one `Formula<A>` enum used in
   both spec and exec, bounds `usize`/`u64` viewed as `nat`, vs. separate
   spec/exec types with `view`. Prefer one type unless T1.4 shows a problem.
   T1.4 evidence: one generic enum with `usize` bounds works in spec and exec;
-  `view_f` maps `Formula<usize>` atoms to `Formula<nat>`. Traces: D13.
-- T2.2 (S) Syntax: 10 constructors mirroring `'a mltl`; `implies_mltl`,
+  `view_f` maps `Formula<usize>` atoms to `Formula<nat>`. Traces: D16 (finite `Set`).
+- T2.2 DONE 2026-10-02 (`mltl.rs`; also `atoms_mltl`). (S) Syntax: 10 constructors mirroring `'a mltl`; `implies_mltl`,
   `iff_mltl` as spec fns (Isabelle definitions, not constructors).
-- T2.3 (M) `semantics_mltl` spec over `Seq<Set<A>>`, case-for-case (incl.
+- T2.3 DONE 2026-10-02 (+ Until/Release sanity checks). (M) `semantics_mltl` spec over `Seq<Set<A>>`, case-for-case (incl.
   `Prop` needs nonempty trace, F/U need `len > a`, G/R vacuous when `len ≤ a`,
   R's `b-1`). Port the `value`/example lemmas from `MLTL_Encoding.thy` as
   proof tests.
