@@ -95,3 +95,17 @@ decision / consequences.
 - Parser before formula progression: M1 → M2 → M3 parser → M4 progression →
   M5 → M6/M8 as unblocked; M7 deferred (Q3). Parser also gives a convenient
   way to write test formulas for later milestones.
+
+## D13 (2026-10-02) — Trace states are `ISet<A>`
+- Context: vstd (0.0.0-2026-09-20) splits finite `Set` from possibly-infinite
+  `ISet`. Isabelle `semantics_mltl :: 'a set list ⇒ ...` allows infinite sets.
+- Decision: spec traces are `Seq<ISet<A>>`, mirroring `'a set list` exactly.
+  Exec traces get a `view` into that type (e.g. `Vec<Vec<bool>>` → `Seq<ISet<nat>>`).
+- Consequences: use ISet lemmas (`group_iset_lemmas`). If an algorithm needs
+  finiteness (e.g. cardinality), state it as an explicit precondition and note
+  the divergence in its correspondence page.
+
+## D14 (2026-10-02) — Q10 (fork URLs) deferred by owner
+- Owner wants to reach mltl-core first. M6 (WEST) and M8 (R2U2) stay blocked
+  on Q10 until revisited. Q11 (identifier rules): agent proposes in T3.1,
+  owner confirms — agreed.

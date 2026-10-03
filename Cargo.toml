@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = ["src/mltl-core"]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+
+[workspace.dependencies]
+# Must match the installed Verus release (agent-docs/verification/verus-notes.md).
+vstd = "=0.0.0-2026-09-20-0158"
+
+[workspace.lints.rust]
+# Verus sets cfg(verus_only) during verification; only use it on imports/attributes.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(verus_only)'] }

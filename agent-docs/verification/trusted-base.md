@@ -7,7 +7,7 @@ Every trusted item in `rust-mltl/` code MUST appear here (AGENTS.md §4):
 | ID | Location (file:item) | Kind | What is trusted | Why | Plan to discharge |
 |---|---|---|---|---|---|
 
-(empty — no code yet, 2026-10-02)
+(empty — no `assume`/`admit`/`external*` in rust-mltl code as of M1, 2026-10-02)
 
 ## Upstream trust inherited by in-place targets
 Track separately once R2U2/WEST are brought in. Known for `r2u2_core` as of

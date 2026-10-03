@@ -31,15 +31,17 @@ Resolved: D9 (Verus latest + reproduce pin; forks as submodules under
 Remaining: Q10 fork URLs (blocks M6/M8), Q11 identifier syntax (T3.1),
 Q3 SAT source (deferred, blocks M7).
 
-## M1 — Toolchain and skeleton
+## M1 — Toolchain and skeleton — DONE 2026-10-02
 - T1.1 DONE 2026-10-02 (`0.2026.09.27.3cf1832`). (S) Install the latest Verus release binary (bundles Z3) (D9); record exact
   version, install path, rustup toolchain in `../verification/verus-notes.md`.
-- T1.2 (S) Decide `cargo verus` vs raw `verus` invocation; root `Cargo.toml`
+- T1.2 DONE 2026-10-02 (`cargo verus verify --workspace` via `scripts/verify.sh`). (S) Decide `cargo verus` vs raw `verus` invocation; root `Cargo.toml`
   workspace with members under `src/`; a `scripts/verify.sh` that verifies all
   crates and exits non-zero on failure.
-- T1.3 (S) Trivial crate `src/mltl-core` with one verified lemma; verify
+- T1.3 DONE 2026-10-02. (S) Trivial crate `src/mltl-core` with one verified lemma; verify
   passes. Create `src/mltl-core/README.md` (AGENTS.md §3.3).
-- T1.4 (M) Feasibility spikes, each recorded in verus-notes (works / fails +
+- T1.4 DONE 2026-10-02 (results + gotchas in verus-notes; code in
+  `verification/spikes/m1-semantics-spike.rs`). Generic exec atoms (`Vec<A>`,
+  `A: Eq`) NOT tested — exec side specialised to `usize` atoms. (M) Feasibility spikes, each recorded in verus-notes (works / fails +
   error text):
   - recursive enum with `Box` children: spec fn with `decreases`, exec fn
     over it, `height`/`size` measures;
@@ -56,6 +58,8 @@ at T2.1.
 - T2.1 (S) Design decision (record as D-entry): one `Formula<A>` enum used in
   both spec and exec, bounds `usize`/`u64` viewed as `nat`, vs. separate
   spec/exec types with `view`. Prefer one type unless T1.4 shows a problem.
+  T1.4 evidence: one generic enum with `usize` bounds works in spec and exec;
+  `view_f` maps `Formula<usize>` atoms to `Formula<nat>`. Traces: D13.
 - T2.2 (S) Syntax: 10 constructors mirroring `'a mltl`; `implies_mltl`,
   `iff_mltl` as spec fns (Isabelle definitions, not constructors).
 - T2.3 (M) `semantics_mltl` spec over `Seq<Set<A>>`, case-for-case (incl.

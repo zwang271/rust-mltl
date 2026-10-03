@@ -17,6 +17,7 @@ Rules for maintaining this folder live in `../AGENTS.md` §3.1.
 | Phased plan (coarse) | `project/roadmap.md` |
 | Task-level work plan (milestones M0–M9, task IDs T*.*) | `project/plan.md` (human summary: `../PLAN.md`) |
 | Verus toolchain, versions, how to run, Verus gotchas | `verification/verus-notes.md` |
+| Throwaway feasibility spikes (not built) | `verification/spikes/` |
 | Ledger of every trusted assumption (`assume`, `external_body`, …) | `verification/trusted-base.md` |
 | Isabelle ↔ Rust correspondence tables (one page per component) | `correspondence/` |
 | Per-module design notes (one page per `src/` module, created as modules appear) | `modules/` |

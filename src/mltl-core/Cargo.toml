@@ -1,0 +1,14 @@
+[package]
+name = "mltl-core"
+version.workspace = true
+edition.workspace = true
+description = "MLTL syntax and semantics, ported from AFP Mission_Time_LTL"
+
+[dependencies]
+vstd.workspace = true
+
+[package.metadata.verus]
+verify = true
+
+[lints]
+workspace = true
