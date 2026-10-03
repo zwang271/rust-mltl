@@ -4,7 +4,7 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
 (what failed, error text, fix).
 
 ## Toolchain (2026-10-02)
-- Verus not installed. Version choice open (Q4 in `../open-questions.md`).
+- Verus not installed. Version: latest release for rust-mltl; reproduce r2u2 pin separately (D9).
 - Upstream `r2u2_core`: `vstd = "0.0.0-2025-08-12-1837"`, `rust-toolchain.toml`
   channel `1.85.1`. Upstream verify recipe
   (`ROOT/r2u2/monitors/rust/docs/dev/verification.md`): `cargo build -v`, copy

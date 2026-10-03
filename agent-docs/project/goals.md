@@ -26,7 +26,7 @@ runnable code has meant:
 3. **Verify R2U2 in place**: proofs over the actual `r2u2_core` Rust source,
    replacing "Isabelle model + SML + conformance tests".
 4. **Verify WEST in place**: the owner's existing public Rust WEST
-   implementation (WEST repo, owned by Zili Wang; not on this machine yet).
+   implementation (https://github.com/zwang271/WEST; D9).
 5. **Port + verify** formula progression and language partitioning in Rust
    (no existing Rust implementation assumed).
 6. **Eliminate the untrusted parsing step**: a verified parser (and ideally a

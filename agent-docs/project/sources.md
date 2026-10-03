@@ -106,6 +106,6 @@ semantics diverge.
 - `ROOT/sabre/`: submodule `github.com/cgjohannsen/sabre` (unrelated? UNKNOWN).
 
 ## Not on this machine
-- **WEST Rust implementation** — public repo owned by Zili Wang. URL UNKNOWN; ask
-  before cloning.
+- **WEST Rust implementation** — https://github.com/zwang271/WEST (owner's
+  public repo; D9). To be brought in as a fork submodule under `vendor/`.
 - **MLTL SAT solver** Isabelle formalization — verified, unpublished. Location UNKNOWN.

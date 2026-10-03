@@ -20,7 +20,7 @@ rust-mltl/
     progression/        # formula progression (goal 5)
     lang-partition/     # language partitioning (goal 5); mltl_ext lives here or in core
     sat/                # MLTL SAT solver
-    r2u2/               # R2U2 in-place verification (goal 3) — see open question Q1
+    r2u2/               # R2U2 in-place verification (goal 3); fork submodules live in vendor/ (D9)
 ```
 
 ## Cross-cutting design points (to settle as we go)

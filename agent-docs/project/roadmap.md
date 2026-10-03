@@ -1,7 +1,7 @@
 # Roadmap (PROPOSED)
 
 Status 2026-10-02: Phase 0 done (docs scaffolding). Task-level breakdown:
-`plan.md` (milestones there supersede this page's ordering where they differ). Order is a suggestion; the
+`plan.md` (milestones there supersede this page's ordering where they differ; order per D12). Order is a suggestion; the
 owner sets priorities.
 
 - **Phase 0 — scaffolding.** AGENTS.md, README.md, agent-docs/. DONE 2026-10-02.

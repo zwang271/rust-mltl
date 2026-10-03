@@ -1,6 +1,7 @@
 # Detailed work plan (agent-facing)
 
-Status: PROPOSED 2026-10-02, awaiting owner review. Human summary: `../../PLAN.md`
+Status: ACCEPTED by owner 2026-10-02 with changes D9–D12 (inline answers in
+`PLAN.md`). Human summary: `../../PLAN.md`
 (keep the two in sync — if you change milestones/order here, log a backlog item
 in `../human-doc-backlog.md` for `PLAN.md`). Coarse phases: `roadmap.md`.
 
@@ -12,36 +13,26 @@ checklist.
 ## Ordering and dependencies
 
 ```
-M0 decisions ─┬─> M1 toolchain ─> M2 mltl-core ─┬─> M4 progression
-              │                                  ├─> M3 parser (needs Q6)
-              │                                  ├─> M5 lang-partition
-              ├─(Q1,Q2)──────────────────────────┼─> M6 WEST in place
-              ├─(Q3)─────────────────────────────┼─> M7 SAT
-              └─(Q1,Q4,Q7)─> T8.1–T8.3 (survey) ─┴─> M8 R2U2 in place
+M1 toolchain ─> M2 mltl-core ─┬─> M3 parser ─> M4 progression ─> M5 lang-partition
+                               ├─(Q10 fork)──> M6 WEST in place
+                               ├─(Q3, deferred)> M7 SAT
+                               └─(Q10 fork)──> T8.1–T8.3 survey ─> M8 R2U2
 M9 cross-cutting runs alongside from M2 on.
 ```
 
-Recommended order: M1 → M2 → M4 → M3 → M5, with M6/M7/M8 surveys started as
-soon as their questions are answered. Rationale: formula progression is the
-smallest algorithm (2.3k Isabelle lines, no extra datatypes) and stress-tests
-the core design before the big ones (LP proof 6.7k lines, WEST proofs 6k, R2U2).
+Order (D12): M1 → M2 → M3 parser → M4 → M5, with M6/M8 started once fork URLs
+(Q10) exist; M7 deferred (Q3). Formula progression is the smallest algorithm
+(2.3k Isabelle lines) and stress-tests the core before the big ones (LP proof
+6.7k lines, WEST proofs 6k, R2U2).
 
-## M0 — Owner decisions (blocking)
-Map to `../open-questions.md`. None needs code; all need the owner.
-- T0.1 Q4 Verus version: match `r2u2_core` pin (`vstd 0.0.0-2025-08-12-1837`,
-  rust 1.85.1) or latest + bump upstream. Recommendation: latest for
-  rust-mltl; reproduce the pin separately in T8.1. Blocks M1.
-- T0.2 Q1 in-place mechanism for R2U2/WEST. Recommendation: git submodule of a
-  fork, on a `verus` branch, under `vendor/` (keeps upstreaming possible).
-  Blocks M6, M8.
-- T0.3 Q2 WEST repo URL. Blocks M6.
-- T0.4 Q3 SAT solver theory location. Blocks M7.
-- T0.5 Q6 parser concrete syntax(es). Blocks M3.
-- T0.6 Q7 R2U2 target theorem. Blocks T8.4+.
-- T0.7 Priority order across M3–M8 (owner may override the recommendation).
+## M0 — Owner decisions — DONE 2026-10-02
+Resolved: D9 (Verus latest + reproduce pin; forks as submodules under
+`vendor/`; WEST URL), D10 (parser syntax), D11 (R2U2 theorem), D12 (order).
+Remaining: Q10 fork URLs (blocks M6/M8), Q11 identifier syntax (T3.1),
+Q3 SAT source (deferred, blocks M7).
 
 ## M1 — Toolchain and skeleton
-- T1.1 (S) Install Verus release binary (bundles Z3) per T0.1; record exact
+- T1.1 (S) Install the latest Verus release binary (bundles Z3) (D9); record exact
   version, install path, rustup toolchain in `../verification/verus-notes.md`.
 - T1.2 (S) Decide `cargo verus` vs raw `verus` invocation; root `Cargo.toml`
   workspace with members under `src/`; a `scripts/verify.sh` that verifies all
@@ -89,9 +80,10 @@ at T2.1.
   `SKIPPED` with reason; zero unrecorded trust.
 
 ## M3 — Verified parser/printer (goal 6)
-Blocked by T0.5. Create `correspondence/parser.md`, `modules/mltl-parse.md`.
+Syntax per D10 (AFP-style, arbitrary identifiers). Create `correspondence/parser.md`, `modules/mltl-parse.md`.
 - T3.1 (S) Write the grammar (precedence, associativity, interval syntax,
-  atom syntax, whitespace) as a doc page; compare with the lark grammar in
+  identifier rules → propose answer to Q11, whitespace) as a doc page; decide
+  the atom type the parser produces (D10 consequences); compare with the lark grammar in
   `ROOT/experiments/run_r2u2_sml.py` and whatever WEST/C2PO accept.
 - T3.2 (M) Spec: spec printer `print(f): Seq<char>` (fully or minimally
   parenthesised) + spec of the accepted language. Correctness statements:
@@ -140,9 +132,9 @@ Large: split into sub-milestones.
 - Exit: union + disjointness `VERIFIED`.
 
 ## M6 — WEST in place (goal 4)
-Blocked by T0.2, T0.3. Source: AFP `WEST_Algorithms.thy` (744),
+Upstream https://github.com/zwang271/WEST; blocked by Q10 (fork). Source: AFP `WEST_Algorithms.thy` (744),
 `WEST_Proofs.thy` (6024), `Regex_Equivalence.thy` (1202).
-- T6.1 (M) Bring the repo in per Q1; build it; survey its structure and map
+- T6.1 (M) Add the fork as submodule `vendor/WEST` (D9); build it; survey its structure and map
   each Rust fn to its `WEST_Algorithms` counterpart (or note divergence) in
   `correspondence/west.md`. Note any input parser it has (goal 6 overlap).
 - T6.2 (M) Spec layer: Verus spec fns mirroring `WEST_Algorithms` (`WEST_bit`,
@@ -158,14 +150,14 @@ Blocked by T0.2, T0.3. Source: AFP `WEST_Algorithms.thy` (744),
 - Exit: real WEST code `VERIFIED` correct w.r.t. `semantics_mltl`.
 
 ## M7 — MLTL SAT solver
-Blocked by T0.4. T7.1 survey + correspondence page; then the same
+DEFERRED (Q3: source not public yet). T7.1 survey + correspondence page; then the same
 spec → exec → main-theorem pattern as M4. Sized after survey.
 
 ## M8 — R2U2 in place (goal 3)
-Blocked by T0.2, T0.6. Sources: `ROOT/r2u2/monitors/rust/r2u2_core`,
+Blocked by Q10 (fork). Target theorem: D11. Sources: `ROOT/r2u2/monitors/rust/r2u2_core`,
 `ROOT/isabelle/R2U2_*.thy`, `ROOT/isabelle/explain_r2u2.md`, `ROOT/*_BUG.md`.
-- T8.1 (S) Reproduce upstream verification with its pinned toolchain and
-  recipe (`r2u2/monitors/rust/docs/dev/verification.md`); record pass/fail.
+- T8.1 (S) Add fork as submodule `vendor/r2u2` (D9). Reproduce upstream
+  verification with its pinned toolchain and recipe (`r2u2/monitors/rust/docs/dev/verification.md`); record pass/fail.
 - T8.2 (S) Audit existing specs. Known 2026-10-02: specs are per-operator
   local properties (`previous.time`/`next_time` bookkeeping, `not` flips
   truth) in `engines/mltl.rs` + `booleanizer.rs`; no link to MLTL semantics;
@@ -181,9 +173,9 @@ Blocked by T0.2, T0.6. Sources: `ROOT/r2u2/monitors/rust/r2u2_core`,
   support); SCQ invariants following `R2U2_SCQ.thy`.
 - T8.6 (L) Operator correctness on real code following `R2U2_Operators.thy`
   (LOAD/NOT/AND/UNTIL, then release/since/trigger).
-- T8.7 (XL) Engine step + whole-monitor theorem per Q7 (refinement of
-  Isabelle model, or direct vs `semantics_mltl` under preconditions excluding
-  the documented bugs).
+- T8.7 (XL) Engine step + whole-monitor theorem: output matches
+  `semantics_mltl` (D11). Where documented bugs falsify it, record the
+  counterexample and decide (with owner) between fix-in-fork or precondition.
 - T8.8 (S) Bridge lemma from R2U2 verdict streams to `mltl-core` semantics.
 - T8.9 (L) Spec the C2PO binary format; verify `internals/process_binary.rs`
   decoding (goal 6 for R2U2).

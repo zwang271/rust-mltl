@@ -65,3 +65,33 @@ decision / consequences.
   the agent author on agent-written lines.
 - Consequences: existing agent commits (0edeeac, 24ba55f, pre-rewrite hashes)
   were re-authored this way; `3df24c7` "first commit" is the owner's.
+
+## D9 (2026-10-02) — Verus version; in-place mechanism (resolves Q4, Q1, Q2)
+- Owner answers to `PLAN.md` decisions 1–3.
+- Verus: rust-mltl uses the latest Verus release. Separately reproduce
+  upstream `r2u2_core`'s pinned `vstd 0.0.0-2025-08-12-1837` / rust 1.85.1
+  (T8.1) before porting R2U2 work to latest.
+- In place: fork the upstream repos; bring forks in as git submodules under
+  `vendor/` (proofs can be upstreamed via PRs). Fork URLs: Q10.
+- WEST upstream: https://github.com/zwang271/WEST
+- Q3 (SAT) deferred by owner.
+
+## D10 (2026-10-02) — Parser syntax (resolves Q6)
+- AFP-style concrete syntax (e.g. `F[0,3](p & q)`), but atoms are arbitrary
+  identifiers, not only `p<n>`/`a<n>`. C2PO input language out of scope (too
+  broad). Identifier lexical rules: Q11.
+- Consequences: parser output needs atoms beyond `nat` — e.g. `Formula<String>`
+  or interned ids + symbol table mapping to `Formula<nat>` for WEST/R2U2. Decide
+  in T3.1/T3.2. R2U2 binary decoding (T8.9) still planned separately.
+
+## D11 (2026-10-02) — R2U2 target theorem (resolves Q7)
+- Target: `r2u2_core` output matches MLTL semantics (`semantics_mltl`), not
+  refinement of the Isabelle R2U2 model. Owner knows of bugs (`ROOT/*_BUG.md`)
+  that may falsify it unconditionally; handle when reached (likely added
+  preconditions or fixes in the fork). Isabelle R2U2 theories remain a guide
+  for invariants and proof structure.
+
+## D12 (2026-10-02) — Milestone order (PLAN.md decision 7)
+- Parser before formula progression: M1 → M2 → M3 parser → M4 progression →
+  M5 → M6/M8 as unblocked; M7 deferred (Q3). Parser also gives a convenient
+  way to write test formulas for later milestones.
