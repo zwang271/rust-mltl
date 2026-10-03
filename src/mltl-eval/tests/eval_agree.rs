@@ -1,6 +1,6 @@
 //! Runtime cross-checks of the two verified evaluators (complements the proofs:
 //! catches build/erasure surprises and documents expected values).
-use mltl_eval::{mltl_eval, mltl_eval_bottom_up};
+use mltl_eval::{mltl_eval, mltl_eval_bottom_up, mltl_eval_bottom_up_bits, BitTrace};
 use mltl_core::mltl::Mltl;
 use std::collections::HashSet;
 
@@ -22,6 +22,7 @@ fn afp_examples() {
     for (f, expected) in cases {
         assert_eq!(mltl_eval(&f, &t), expected);
         assert_eq!(mltl_eval_bottom_up(&f, &t), expected);
+        assert_eq!(mltl_eval_bottom_up_bits(&f, &BitTrace::from_sets(&t, 1)), expected);
     }
 }
 
@@ -64,6 +65,8 @@ fn evaluators_agree_on_random_inputs() {
         let len = r.below(9);
         let t: Vec<HashSet<usize>> =
             (0..len).map(|_| (0..3).filter(|_| r.below(2) == 0).collect()).collect();
-        assert_eq!(mltl_eval(&f, &t), mltl_eval_bottom_up(&f, &t));
+        let expected = mltl_eval(&f, &t);
+        assert_eq!(mltl_eval_bottom_up(&f, &t), expected);
+        assert_eq!(mltl_eval_bottom_up_bits(&f, &BitTrace::from_sets(&t, 3)), expected);
     }
 }

@@ -146,8 +146,10 @@ Blocked by Q10 (fork). Target theorem: D11. Sources: `ROOT/r2u2/monitors/rust/r2
   early-exit evaluators win on constants.
 - Shelved: T10.2, the bit-parallel batch over many traces (D28; design in
   `m10-batched-eval.md`).
-- **T10.4 (next): bit-row trace representation** in `src/mltl-eval` (D31,
-  D32): atoms read from a bit row per atom, built once per trace with a
-  proof that it denotes the same spec trace. Tables and interval logic
-  unchanged. Order: profile → prototype → benchmark → iterate → prove;
-  lessons in `modules/mltl-eval.md`.
+- **T10.4 done (2026-10-03): bit-row trace representation**, verified
+  (`mltl_eval_bottom_up_bits`, `BitTrace::from_sets`). ~4× faster verified on
+  the heavy benchmark; prototype shows ~6× is reachable. Lessons in
+  `modules/mltl-eval.md`.
+- Possible next (owner's call): tune the verified table/next-array code
+  (`vec![x; n]`, fewer pushes) to close the 1.8× gap to the prototype; a
+  faster verified `from_sets`.

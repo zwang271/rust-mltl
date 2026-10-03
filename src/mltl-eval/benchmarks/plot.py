@@ -22,6 +22,7 @@ RESULTS, PLOTS = ROOT / "results", ROOT / "plots"
 STYLE = {
     "topdown": dict(label="top-down (verified)", color="#d62728", marker="o"),
     "bottomup": dict(label="bottom-up (verified)", color="#1f77b4", marker="s"),
+    "bottomup-bits": dict(label="bottom-up, bit-row trace (verified)", color="#9467bd", marker="P"),
     "libmltl": dict(label="libmltl", color="#7f7f7f", marker="^"),
     "r2u2": dict(label="R2U2 (Rust monitor)", color="#2ca02c", marker="D"),
 }

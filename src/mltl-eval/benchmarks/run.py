@@ -34,7 +34,7 @@ R2U2_DIR = ROOT / "r2u2_driver"
 R2U2_DRIVER = R2U2_DIR / "target/release/r2u2_driver"
 R2U2_QUEUE_SLOTS = "1048576"         # compile-time SCQ arena size of the R2U2 monitor
 R2U2_TL_INSTRUCTIONS = "8192"        # compile-time instruction-table size (large-size needs ~1.5k)
-EVALUATORS = ["topdown", "bottomup", "libmltl", "r2u2"]
+EVALUATORS = ["topdown", "bottomup", "bottomup-bits", "libmltl", "r2u2"]
 
 
 def build():
@@ -152,7 +152,7 @@ def main():
                 if ref is None:
                     ref = r
                 agrees = r["hash"] == ref["hash"]
-                if ev in ("bottomup", "proto-hash", "proto-bits", "proto-masks"):
+                if ev in ("bottomup", "bottomup-bits", "proto-hash", "proto-bits", "proto-masks"):
                     assert agrees, f"{ev} disagrees with top-down on {d}"
                 if ev == "r2u2" and r["undecided"] == 0 and r["unsupported"] == 0 and not agrees:
                     print(f"  note: R2U2 decided every verdict on {d} but disagrees with AFP", flush=True)

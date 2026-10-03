@@ -147,6 +147,22 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
   custom `path` in `src/mltl-core/Cargo.toml`). Plain builds emit
   unused-variable/import warnings for ghost-only bindings — expected.
 
+- **`&mut` parameters in postconditions** must be written `final(w)@`
+  (and `old(w)@` for the entry value); plain `w@` is rejected ("disambiguate
+  by wrapping it in either `old` or `final`").
+- **Ghost closures don't unfold reliably.** `let ghost goal = |i| ...;` then
+  `goal(x)` in assertions failed even with hints; writing the lambda inline
+  (`Seq::new(n, |m: int| ...)`) worked.
+- **Traits with spec methods work for generic proofs**: `trait AtomRead {
+  spec fn view_trace(&self) -> ..; fn push_row(..) ensures ..; }`, generic
+  `fn f<T: AtomRead + ?Sized>(t: &T)`, and `impl AtomRead for [HashSet<usize>]`
+  all verify; proofs over the abstract `view_trace()` carried over unchanged.
+- **Bit reasoning**: `assert(... ) by (bit_vector) requires k < 64u64;` proves
+  facts like "setting bit k leaves other bits unchanged"; pair with
+  `by (nonlinear_arith)` for `i / 64`, `i % 64` index facts.
+- **Plain builds erase spec items**: a `pub use` of a spec fn from `lib.rs`
+  breaks `cargo build` (E0432); re-export exec items only.
+
 ## Spikes
 - `spikes/m1-semantics-spike.rs` (T1.4, 2026-10-02, VERIFIED: 14 verified,
   0 errors; not part of the build). Contains: generic `Formula<A>` enum with

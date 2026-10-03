@@ -6,6 +6,8 @@ use std::collections::HashSet;
 use mltl_core::mltl::*;
 use mltl_core::properties::*;
 use crate::trace::*;
+use crate::atom_read::*;
+use crate::bit_trace::*;
 
 verus! {
 
@@ -281,34 +283,56 @@ proof fn lemma_release_window(tv: Seq<Set<usize>>, i: nat, a: usize, b: usize, p
     }
 }
 
-/// Bottom-up evaluation: `mltl_eval_bottom_up(f, t) == semantics_mltl(t, f)`.
+/// Bottom-up evaluation on a set-per-step trace:
+/// `mltl_eval_bottom_up(f, t) == semantics_mltl(t, f)`.
 pub fn mltl_eval_bottom_up(f: &Mltl<usize>, t: &Trace) -> (r: bool)
     requires
         t.len() < usize::MAX,
     ensures
-        r == semantics_mltl(trace_view(t@), *f),
+        r == semantics_mltl(t.view_trace(), *f),
 {
-    let h = if t.len() == 0 { 0 } else { 1 };
+    mltl_eval_bottom_up_on(f, t)
+}
+
+/// Bottom-up evaluation on a bit-row trace (see `bit_trace.rs`).
+pub fn mltl_eval_bottom_up_bits(f: &Mltl<usize>, t: &BitTrace) -> (r: bool)
+    requires
+        t.inv(),
+        t.view_trace().len() < usize::MAX,
+    ensures
+        r == semantics_mltl(t.view_trace(), *f),
+{
+    mltl_eval_bottom_up_on(f, t)
+}
+
+/// Bottom-up evaluation on any trace representation.
+pub fn mltl_eval_bottom_up_on<T: AtomRead + ?Sized>(f: &Mltl<usize>, t: &T) -> (r: bool)
+    requires
+        t.inv(),
+        t.view_trace().len() < usize::MAX,
+    ensures
+        r == semantics_mltl(t.view_trace(), *f),
+{
+    let n = t.len();
+    let h = if n == 0 { 0 } else { 1 };
     let w = sat_table(f, t, h);
     proof {
-        lemma_drop_zero(trace_view(t@));
-        if t.len() == 0 {
-            assert(trace_view(t@).len() == 0);
-        }
+        lemma_drop_zero(t.view_trace());
     }
     w[0]
 }
 
 /// The table for `f` on positions `0..h` (plus the empty-suffix slot).
-fn sat_table(f: &Mltl<usize>, t: &Trace, h: usize) -> (w: Vec<bool>)
+fn sat_table<T: AtomRead + ?Sized>(f: &Mltl<usize>, t: &T, h: usize) -> (w: Vec<bool>)
     requires
-        h <= t.len(),
-        t.len() < usize::MAX,
+        t.inv(),
+        h <= t.view_trace().len(),
+        t.view_trace().len() < usize::MAX,
     ensures
-        sat_ok(trace_view(t@), *f, w@, h as nat),
+        sat_ok(t.view_trace(), *f, w@, h as nat),
     decreases *f, 1nat,
 {
-    let ghost tv = trace_view(t@);
+    let ghost tv = t.view_trace();
     let len = t.len();
     proof { assert(tv.len() == len); lemma_drop_past_end(tv, len as nat); }
     let mut w: Vec<bool> = Vec::with_capacity(h + 1);
@@ -329,20 +353,12 @@ fn sat_table(f: &Mltl<usize>, t: &Trace, h: usize) -> (w: Vec<bool>)
             w
         },
         Mltl::Prop(q) => {
-            let mut i = 0;
-            while i < h
-                invariant
-                    i <= h, h <= len, len == t.len(), w.len() == i, tv == trace_view(t@),
-                    *f == Mltl::<usize>::Prop(*q),
-                    forall|m: nat| m < i ==> w@[m as int] == semantics_mltl(#[trigger] drop(tv, m), *f),
-                decreases h - i,
-            {
-                proof {
-                    lemma_drop_len(tv, i as nat);
-                    assert(drop(tv, i as nat)[0] == t@[i as int]@);
+            t.push_row(*q, h, &mut w);
+            proof {
+                assert forall|m: nat| m < h implies w@[m as int] == semantics_mltl(#[trigger] drop(tv, m), *f) by {
+                    lemma_drop_len(tv, m);
+                    assert(drop(tv, m)[0] == tv[m as int]);
                 }
-                w.push(t[i].contains(q));
-                i = i + 1;
             }
             w.push(false);
             w
@@ -445,16 +461,17 @@ proof fn lemma_window_in_table(h: nat, b: nat, len: nat, hc: nat, i: nat)
 {
 }
 
-fn sat_future(f: &Mltl<usize>, a: usize, b: usize, g: &Box<Mltl<usize>>, t: &Trace, h: usize) -> (w: Vec<bool>)
+fn sat_future<T: AtomRead + ?Sized>(f: &Mltl<usize>, a: usize, b: usize, g: &Box<Mltl<usize>>, t: &T, h: usize) -> (w: Vec<bool>)
     requires
-        h <= t.len(),
-        t.len() < usize::MAX,
+        t.inv(),
+        h <= t.view_trace().len(),
+        t.view_trace().len() < usize::MAX,
         *f == Mltl::<usize>::Future(a, b, *g),
     ensures
-        sat_ok(trace_view(t@), *f, w@, h as nat),
+        sat_ok(t.view_trace(), *f, w@, h as nat),
     decreases *f, 0nat,
 {
-    let ghost tv = trace_view(t@);
+    let ghost tv = t.view_trace();
     let len = t.len();
     proof { assert(tv.len() == len); lemma_drop_past_end(tv, len as nat); assert(f->Future_2 == *g); }
     let hc = child_horizon(h, b, len);
@@ -464,7 +481,7 @@ fn sat_future(f: &Mltl<usize>, a: usize, b: usize, g: &Box<Mltl<usize>>, t: &Tra
     let mut i = 0;
     while i < h
         invariant
-            i <= h, h <= len, len == t.len(), len < usize::MAX, w.len() == i, tv == trace_view(t@),
+            i <= h, h <= len, len == t.view_trace().len(), len < usize::MAX, w.len() == i, tv == t.view_trace(),
             *f == Mltl::<usize>::Future(a, b, *g), tv.len() == len,
             h > 0 ==> hc == if h + b <= len { h + b } else { len as int },
             sat_ok(tv, **g, wg@, hc as nat), next_ok(wg@, true, nt@),
@@ -492,16 +509,17 @@ fn sat_future(f: &Mltl<usize>, a: usize, b: usize, g: &Box<Mltl<usize>>, t: &Tra
     w
 }
 
-fn sat_global(f: &Mltl<usize>, a: usize, b: usize, g: &Box<Mltl<usize>>, t: &Trace, h: usize) -> (w: Vec<bool>)
+fn sat_global<T: AtomRead + ?Sized>(f: &Mltl<usize>, a: usize, b: usize, g: &Box<Mltl<usize>>, t: &T, h: usize) -> (w: Vec<bool>)
     requires
-        h <= t.len(),
-        t.len() < usize::MAX,
+        t.inv(),
+        h <= t.view_trace().len(),
+        t.view_trace().len() < usize::MAX,
         *f == Mltl::<usize>::Global(a, b, *g),
     ensures
-        sat_ok(trace_view(t@), *f, w@, h as nat),
+        sat_ok(t.view_trace(), *f, w@, h as nat),
     decreases *f, 0nat,
 {
-    let ghost tv = trace_view(t@);
+    let ghost tv = t.view_trace();
     let len = t.len();
     proof { assert(tv.len() == len); lemma_drop_past_end(tv, len as nat); assert(f->Global_2 == *g); }
     let hc = child_horizon(h, b, len);
@@ -511,7 +529,7 @@ fn sat_global(f: &Mltl<usize>, a: usize, b: usize, g: &Box<Mltl<usize>>, t: &Tra
     let mut i = 0;
     while i < h
         invariant
-            i <= h, h <= len, len == t.len(), len < usize::MAX, w.len() == i, tv == trace_view(t@),
+            i <= h, h <= len, len == t.view_trace().len(), len < usize::MAX, w.len() == i, tv == t.view_trace(),
             *f == Mltl::<usize>::Global(a, b, *g), tv.len() == len,
             h > 0 ==> hc == if h + b <= len { h + b } else { len as int },
             sat_ok(tv, **g, wg@, hc as nat), next_ok(wg@, false, nf@),
@@ -541,17 +559,18 @@ fn sat_global(f: &Mltl<usize>, a: usize, b: usize, g: &Box<Mltl<usize>>, t: &Tra
     w
 }
 
-fn sat_until(f: &Mltl<usize>, g1: &Box<Mltl<usize>>, a: usize, b: usize, g2: &Box<Mltl<usize>>, t: &Trace, h: usize)
+fn sat_until<T: AtomRead + ?Sized>(f: &Mltl<usize>, g1: &Box<Mltl<usize>>, a: usize, b: usize, g2: &Box<Mltl<usize>>, t: &T, h: usize)
     -> (w: Vec<bool>)
     requires
-        h <= t.len(),
-        t.len() < usize::MAX,
+        t.inv(),
+        h <= t.view_trace().len(),
+        t.view_trace().len() < usize::MAX,
         *f == Mltl::<usize>::Until(*g1, a, b, *g2),
     ensures
-        sat_ok(trace_view(t@), *f, w@, h as nat),
+        sat_ok(t.view_trace(), *f, w@, h as nat),
     decreases *f, 0nat,
 {
-    let ghost tv = trace_view(t@);
+    let ghost tv = t.view_trace();
     let len = t.len();
     proof { assert(tv.len() == len); lemma_drop_past_end(tv, len as nat); assert(f->Until_0 == *g1 && f->Until_3 == *g2); }
     let hc = child_horizon(h, b, len);
@@ -563,7 +582,7 @@ fn sat_until(f: &Mltl<usize>, g1: &Box<Mltl<usize>>, a: usize, b: usize, g2: &Bo
     let mut i = 0;
     while i < h
         invariant
-            i <= h, h <= len, len == t.len(), len < usize::MAX, w.len() == i, tv == trace_view(t@),
+            i <= h, h <= len, len == t.view_trace().len(), len < usize::MAX, w.len() == i, tv == t.view_trace(),
             *f == Mltl::<usize>::Until(*g1, a, b, *g2), tv.len() == len,
             h > 0 ==> hc == if h + b <= len { h + b } else { len as int },
             sat_ok(tv, **g1, w1@, hc as nat), next_ok(w1@, false, nf1@),
@@ -616,17 +635,18 @@ fn sat_until(f: &Mltl<usize>, g1: &Box<Mltl<usize>>, a: usize, b: usize, g2: &Bo
     w
 }
 
-fn sat_release(f: &Mltl<usize>, g1: &Box<Mltl<usize>>, a: usize, b: usize, g2: &Box<Mltl<usize>>, t: &Trace, h: usize)
+fn sat_release<T: AtomRead + ?Sized>(f: &Mltl<usize>, g1: &Box<Mltl<usize>>, a: usize, b: usize, g2: &Box<Mltl<usize>>, t: &T, h: usize)
     -> (w: Vec<bool>)
     requires
-        h <= t.len(),
-        t.len() < usize::MAX,
+        t.inv(),
+        h <= t.view_trace().len(),
+        t.view_trace().len() < usize::MAX,
         *f == Mltl::<usize>::Release(*g1, a, b, *g2),
     ensures
-        sat_ok(trace_view(t@), *f, w@, h as nat),
+        sat_ok(t.view_trace(), *f, w@, h as nat),
     decreases *f, 0nat,
 {
-    let ghost tv = trace_view(t@);
+    let ghost tv = t.view_trace();
     let len = t.len();
     proof { assert(tv.len() == len); lemma_drop_past_end(tv, len as nat); assert(f->Release_0 == *g1 && f->Release_3 == *g2); }
     let hc = child_horizon(h, b, len);
@@ -639,7 +659,7 @@ fn sat_release(f: &Mltl<usize>, g1: &Box<Mltl<usize>>, a: usize, b: usize, g2: &
     let mut i = 0;
     while i < h
         invariant
-            i <= h, h <= len, len == t.len(), len < usize::MAX, w.len() == i, tv == trace_view(t@),
+            i <= h, h <= len, len == t.view_trace().len(), len < usize::MAX, w.len() == i, tv == t.view_trace(),
             *f == Mltl::<usize>::Release(*g1, a, b, *g2), tv.len() == len, bm1 == nat_sub(b as nat, 1),
             h > 0 ==> hc == if h + b <= len { h + b } else { len as int },
             sat_ok(tv, **g1, w1@, hc as nat), next_ok(w1@, true, nt1@),

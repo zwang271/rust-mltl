@@ -45,65 +45,73 @@ least-squares fit through the upper half of the points on log-log axes
 
 ## Results (2026-10-03, Apple M-series laptop)
 
+"Bit rows" is the same verified bottom-up algorithm reading atoms from a
+bit-row trace instead of a set per step (see `../README.md`).
+
 Growth exponents fitted on log-log axes:
 
-| Experiment | top-down | bottom-up | libmltl | R2U2 |
-|---|---|---|---|---|
-| length, late witnesses | 1.99 | **1.04** | 1.97 | **1.00** |
-| length, random traces | 1.03 | 1.25 | 1.14 | 1.02 |
-| width | 1.97 | **0.99** | 1.95 | **0.98** |
-| libmltl workload | 1.78 | 1.12 | 1.88 | — |
-| heavy formula, length | 1.01 | 0.98 | 1.00 | 1.00 |
-| heavy formula, size | 1.22 | 0.98 | 1.21 | 0.89 |
+| Experiment | top-down | bottom-up | bottom-up, bit rows | libmltl | R2U2 |
+|---|---|---|---|---|---|
+| length, late witnesses | 2.00 | 1.02 | **0.86** | 1.97 | 0.97 |
+| length, random traces | 1.07 | 1.33 | 1.21 | 1.13 | 1.01 |
+| width | 1.96 | 0.99 | **0.85** | 1.94 | 0.98 |
+| libmltl workload | 1.74 | 1.05 | 0.93 | 1.86 | — |
+| heavy formula, length | 1.00 | 0.98 | 0.94 | 1.00 | 1.00 |
+| heavy formula, size | 1.23 | 1.02 | 0.97 | 1.21 | 0.90 |
 
 Time per evaluation at the largest point:
 
-| Experiment | top-down | bottom-up | libmltl | R2U2 |
-|---|---|---|---|---|
-| length, late witnesses (n = 16384) | 59.8 ms | **98 µs** | 11.4 ms | 321 µs |
-| length, random (n = 16384) | 47 µs | 158 µs | **25 µs** | 167 µs |
-| width (w = 2048) | 14.9 ms | **50 µs** | 3.0 ms | 154 µs |
-| depth (d = 7) | 35.8 ms | **1.2 µs** | 6.8 ms | 1.9 µs |
-| libmltl workload (n = 4096) | 130 µs | **71 µs** | 212 µs | — |
-| heavy formula (n = 2²¹ ≈ 2M) | 4.44 s | **0.51 s** | 1.36 s | 1.29 s |
-| heavy formula ×32 (n = 2¹⁸) | 25.7 s | **2.03 s** | 7.57 s | 2.98 s |
+| Experiment | top-down | bottom-up | bottom-up, bit rows | libmltl | R2U2 |
+|---|---|---|---|---|---|
+| length, late witnesses (n = 16384) | 60.1 ms | 94 µs | **25 µs** | 11.5 ms | 320 µs |
+| length, random (n = 16384) | 54 µs | 190 µs | 59 µs | **30 µs** | 190 µs |
+| width (w = 2048) | 14.9 ms | 49 µs | **12 µs** | 2.9 ms | 158 µs |
+| depth (d = 7) | 36.2 ms | 1.3 µs | **1.0 µs** | 7.2 ms | 2.1 µs |
+| libmltl workload (n = 4096) | 150 µs | 73 µs | **24 µs** | 220 µs | — |
+| heavy formula (n = 2²¹ ≈ 2M) | 4.50 s | 485 ms | **141 ms** | 1.35 s | 1.28 s |
+| heavy formula ×32 (n = 2¹⁸) | 26.4 s | 2.06 s | **0.66 s** | 7.54 s | 2.99 s |
 
+- **The bit-row trace makes bottom-up 3–4× faster** wherever atoms are read
+  often (1.1–1.5× on formulas with a single atom, such as the depth
+  experiment). On the heavy formula it is now about 9× faster than libmltl
+  and R2U2 and 32× faster than top-down. Converting a trace costs about
+  0.1 s per million steps, once per trace. An unverified prototype of the
+  same change reaches about 6×; the difference is in the verified code's
+  table building, not in the trace format.
 - **Heavy, realistic formulas.** With fixed windows every evaluator is linear
-  in n, so the difference is the constant factor. Bottom-up is about 2.6×
-  faster than libmltl and R2U2 and 8.8× faster than top-down at 2M steps.
-  Growing the formula 32-fold costs bottom-up exactly 32×. Top-down and
-  libmltl grow faster (exponent ≈ 1.2), because the shifted copies also have
-  wider windows, which multiply their per-position cost. R2U2 grows a little
-  slower than linear (0.89), plausibly because its compiler shares common
-  subformulas across copies.
-- **Bottom-up is linear wherever the work is.** With late witnesses it is
-  about 600× faster than top-down and 115× faster than libmltl at
-  n = 16384.
+  in n, so the difference is the constant factor. Growing the formula
+  32-fold costs bottom-up 32×. Top-down and libmltl grow faster (exponent
+  ≈ 1.2), because the shifted copies also have wider windows, which multiply
+  their per-position cost. R2U2 grows a little slower than linear (0.90),
+  plausibly because its compiler shares common subformulas across copies.
+- **Bottom-up is linear wherever the work is.** With late witnesses, at
+  n = 16384, the bit-row version is about 2,400× faster than top-down and
+  460× faster than libmltl. Exponents below 1 for the bit-row version mean
+  its fixed per-call overhead is still a visible share at small sizes.
 - **R2U2 is also linear.** Like bottom-up, it never re-evaluates a subformula
-  at the same time step. It is about 3× slower than bottom-up here. It is
-  measured on stepping alone: monitor re-initialisation between traces is
-  excluded.
+  at the same time step. It is measured on stepping alone: monitor
+  re-initialisation between traces is excluded.
 - **On random traces early exits are cheap,** so top-down and libmltl are
-  roughly linear too, with smaller constants. Bottom-up's exponent of 1.25 is
-  not algorithmic. It does the same amount of work on random and periodic
-  traces (same formulas, same horizons), but random data costs more per entry
-  at large n. The likely causes are branch mispredictions and tables
-  outgrowing the CPU caches; this has not been measured separately.
-- **On libmltl's own workload, bottom-up overtakes both from n ≈ 2048.**
-  libmltl's answers differ from the AFP semantics at n = 4, 8 and 16, where
-  formula windows extend past the end of the trace.
+  roughly linear too, with small constants; libmltl stays fastest there.
+  Bottom-up's exponent above 1 is not algorithmic. It does the same work on
+  random and periodic traces, but random data costs more per entry at large
+  n, likely from branch mispredictions and cache misses (not measured
+  separately).
+- **libmltl's answers differ from the AFP semantics** at n = 4, 8 and 16 of
+  its own workload, where formula windows extend past the end of the trace.
 - **R2U2 agreed with the AFP semantics on every workload it ran.** It is
   omitted from the libmltl workload: most of those formulas contain `true`
   or `false`, and constant operands make R2U2's monitor loop forever (an
-  R2U2 bug). In general R2U2 also emits no verdict when a window extends
-  past the end of the trace (no end-of-trace handling). None of our
-  workloads hit that case.
+  R2U2 bug). R2U2 also emits no verdict when a window extends past the end
+  of the trace; none of our workloads hit that case.
 
 ## Files
 
 - `gen_workloads.py`: deterministic workload generator.
 - `driver.rs`: driver for the Rust evaluators (built as the cargo example
   `bench_driver`). Its formula parser is unverified benchmark scaffolding.
+- `proto.rs`: unverified prototype used to try trace representations before
+  proving them (`--impls proto-hash,proto-bits,proto-masks`).
 - `libmltl_driver.cc`: the same driver for libmltl.
 - `r2u2_driver/`: the same driver for R2U2's Rust monitor (separate crate on
   R2U2's pinned toolchain; formulas are compiled by R2U2's C2PO). It works

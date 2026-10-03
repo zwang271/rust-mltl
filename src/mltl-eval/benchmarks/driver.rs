@@ -13,7 +13,11 @@
 //! NOT verified: the parser below is benchmark scaffolding (milestone 3 is
 //! the verified parser).
 use mltl_eval::{mltl_eval, mltl_eval_bottom_up};
-use mltl_eval::proto::{eval_bottom_up as proto_eval, BitTrace, StepMasks};
+use mltl_eval::bottom_up::mltl_eval_bottom_up_bits;
+use mltl_eval::bit_trace::BitTrace as VerifiedBitTrace;
+#[path = "proto.rs"]
+mod proto;
+use proto::{eval_bottom_up as proto_eval, BitTrace, StepMasks};
 use mltl_core::mltl::Mltl;
 use std::collections::HashSet;
 use std::time::Instant;
@@ -97,6 +101,14 @@ fn main() {
     } else {
         Vec::new()
     };
+    let vbits: Vec<VerifiedBitTrace> = if which == "bottomup-bits" {
+        traces.iter().map(|t| {
+            let atoms = t.iter().flat_map(|s| s.iter().copied()).max().map_or(0, |m| m + 1);
+            VerifiedBitTrace::from_sets(t, atoms)
+        }).collect()
+    } else {
+        Vec::new()
+    };
     let masks: Vec<StepMasks> = if which == "proto-masks" {
         traces.iter().map(|t| StepMasks::from_sets(t)).collect()
     } else {
@@ -106,6 +118,7 @@ fn main() {
     let eval: Box<dyn Fn(&Mltl<usize>, usize) -> bool> = match which {
         "topdown" => Box::new(|f, j| mltl_eval(f, &traces[j])),
         "bottomup" => Box::new(|f, j| mltl_eval_bottom_up(f, &traces[j])),
+        "bottomup-bits" => Box::new(|f, j| mltl_eval_bottom_up_bits(f, &vbits[j])),
         "proto-hash" => Box::new(|f, j| proto_eval(f, traces[j].as_slice())),
         "proto-bits" => Box::new(|f, j| proto_eval(f, &bits[j])),
         "proto-masks" => Box::new(|f, j| proto_eval(f, &masks[j])),
