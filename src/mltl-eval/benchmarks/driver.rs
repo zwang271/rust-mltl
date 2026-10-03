@@ -13,6 +13,7 @@
 //! NOT verified: the parser below is benchmark scaffolding (milestone 3 is
 //! the verified parser).
 use mltl_eval::{mltl_eval, mltl_eval_bottom_up};
+use mltl_eval::proto::{eval_bottom_up as proto_eval, BitTrace, StepMasks};
 use mltl_core::mltl::Mltl;
 use std::collections::HashSet;
 use std::time::Instant;
@@ -87,9 +88,27 @@ fn main() {
     let traces: Vec<Vec<HashSet<usize>>> = std::fs::read_to_string(&args[3]).unwrap()
         .lines().filter(|l| !l.trim().is_empty()).map(parse_trace).collect();
     let min_s: f64 = args[4].parse().unwrap();
-    let eval: fn(&Mltl<usize>, &[HashSet<usize>]) -> bool = match which {
-        "topdown" => |f, t| mltl_eval(f, t),
-        "bottomup" => |f, t| mltl_eval_bottom_up(f, t),
+    // Unverified prototypes (T10.4). "proto-bits" converts every trace to the
+    // bit-row representation once, before timing; the conversion cost is
+    // reported separately on stderr.
+    let conv = Instant::now();
+    let bits: Vec<BitTrace> = if which == "proto-bits" {
+        traces.iter().map(|t| BitTrace::from_sets(t)).collect()
+    } else {
+        Vec::new()
+    };
+    let masks: Vec<StepMasks> = if which == "proto-masks" {
+        traces.iter().map(|t| StepMasks::from_sets(t)).collect()
+    } else {
+        Vec::new()
+    };
+    eprintln!("conversion_s={:.6}", conv.elapsed().as_secs_f64());
+    let eval: Box<dyn Fn(&Mltl<usize>, usize) -> bool> = match which {
+        "topdown" => Box::new(|f, j| mltl_eval(f, &traces[j])),
+        "bottomup" => Box::new(|f, j| mltl_eval_bottom_up(f, &traces[j])),
+        "proto-hash" => Box::new(|f, j| proto_eval(f, traces[j].as_slice())),
+        "proto-bits" => Box::new(|f, j| proto_eval(f, &bits[j])),
+        "proto-masks" => Box::new(|f, j| proto_eval(f, &masks[j])),
         _ => panic!("unknown evaluator {which}"),
     };
     let (mut reps, mut trues, mut hash) = (0u64, 0u64, 0u64);
@@ -98,8 +117,8 @@ fn main() {
         trues = 0;
         hash = 0xcbf29ce484222325;
         for f in &formulas {
-            for t in &traces {
-                let r = eval(f, t);
+            for j in 0..traces.len() {
+                let r = eval(f, j);
                 trues += r as u64;
                 hash = (hash ^ r as u64).wrapping_mul(0x100000001b3);
             }

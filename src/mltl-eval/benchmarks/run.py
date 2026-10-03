@@ -1,6 +1,6 @@
 """Build the drivers, run every workload, and write results/<experiment>.csv.
 
-  python run.py [--quick] [--min-seconds S] [--budget S] [--only exp1,exp2]
+  python run.py [--quick] [--min-seconds S] [--budget S] [--only exp1,exp2] [--impls a,b]
 
 Each (workload, evaluator) point is timed by repeating the full workload
 until at least --min-seconds have passed. Once an evaluator needs more than
@@ -132,6 +132,7 @@ def main():
     build()
     RESULTS.mkdir(exist_ok=True)
     only = args[args.index("--only") + 1].split(",") if "--only" in args else None
+    evaluators = args[args.index("--impls") + 1].split(",") if "--impls" in args else EVALUATORS
     for exp_dir in sorted((ROOT / "workloads").iterdir()):
         if only and exp_dir.name not in only:
             continue
@@ -140,7 +141,7 @@ def main():
         for d in points:
             meta = json.loads((d / "meta.json").read_text())
             ref = None
-            for ev in EVALUATORS:
+            for ev in evaluators:
                 if ev in skipped:
                     continue
                 # R2U2 hangs on most of libmltl's formulas (constant operands, an R2U2
@@ -151,8 +152,8 @@ def main():
                 if ref is None:
                     ref = r
                 agrees = r["hash"] == ref["hash"]
-                if ev == "bottomup":
-                    assert agrees, f"verified evaluators disagree on {d}"
+                if ev in ("bottomup", "proto-hash", "proto-bits", "proto-masks"):
+                    assert agrees, f"{ev} disagrees with top-down on {d}"
                 if ev == "r2u2" and r["undecided"] == 0 and r["unsupported"] == 0 and not agrees:
                     print(f"  note: R2U2 decided every verdict on {d} but disagrees with AFP", flush=True)
                 rows.append(dict(meta, **r, agrees=agrees))
