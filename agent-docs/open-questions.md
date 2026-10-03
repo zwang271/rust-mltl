@@ -3,8 +3,6 @@
 Ask the owner when a question blocks work; move answered items to
 `decisions.md` (and delete here).
 
-- **Q3 — SAT solver formalization location** (verified, unpublished). DEFERRED
-  by owner 2026-10-02: will become public later; M7 waits until then.
 - **Q5 — Who wrote the existing Verus annotations in `r2u2_core`, and what do
   they prove?** Build on them or start fresh?
   Partial answer (2026-10-02, from `git log` + grep): author Alexis Aurandt
@@ -24,3 +22,7 @@ Ask the owner when a question blocks work; move answered items to
 - **Q11 — Identifier syntax** for parser atoms (D10): which characters, can
   identifiers clash with keywords (`F`, `G`, `U`, `R`, `true`, `false`, …),
   case sensitivity? Agent proposes in T3.1, owner confirms.
+- **Q13 — Integration for the GA project**: Python (PyO3 bindings, like
+  libmltl's pybind) or Rust? Should the parser also accept libmltl syntax
+  (`!`, `&`, `|`, `^`, `->`, `<->`, `p<N>`, `t/f`)?
+

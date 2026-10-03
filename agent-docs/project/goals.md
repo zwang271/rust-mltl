@@ -37,6 +37,13 @@ runnable code has meant:
 Also in scope: the MLTL SAT solver (verified in Isabelle, unpublished; source
 location UNKNOWN — see `../open-questions.md`).
 
+## Owner interest: a very fast verified evaluator (recorded 2026-10-02)
+The owner has a side project learning MLTL formulas from positive/negative
+trace sets with genetic algorithms / search, which needs a *very fast*
+formula-on-trace evaluator (many formulas × many traces). A
+performance-optimized, verified evaluator is a desired by-product. See
+`plan.md` M10 for the planned approach.
+
 ## Guiding principles
 - The Isabelle proofs are the reference. We are re-proving in Verus, not
   trusting Isabelle results via axioms — unless a decision in

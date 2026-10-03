@@ -16,6 +16,7 @@ Rules for maintaining this folder live in `../AGENTS.md` §3.1.
 | Planned crate/module layout | `project/architecture.md` |
 | Phased plan (coarse) | `project/roadmap.md` |
 | Task-level work plan (milestones M0–M9, task IDs T*.*) | `project/plan.md` (human summary: `../PLAN.md`) |
+| M10 batched (bit-parallel) evaluator design, SHELVED | `project/m10-batched-eval.md` |
 | Verus toolchain, versions, how to run, Verus gotchas | `verification/verus-notes.md` |
 | Throwaway feasibility spikes (not built) | `verification/spikes/` |
 | Ledger of every trusted assumption (`assume`, `external_body`, …) | `verification/trusted-base.md` |

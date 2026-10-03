@@ -8,6 +8,7 @@ placeholders; other pages use them too and must not hard-code machine paths.
 | `REPO` | this repo (rust-mltl) | `/Users/wangzili/Documents/rust-mltl` |
 | `ROOT` | `MLTL_R2U2-` repo (local Isabelle R2U2 work, `r2u2` submodule, experiments) | `/Users/wangzili/Documents/MLTL_R2U2-` |
 | `AFP` | Archive of Formal Proofs release 2026-09-11 (https://www.isa-afp.org) | `~/afp-2026-09-11` |
+| `REU` | `isabelle-group` repo of the Iowa State REU 2026 (MLTL→SAT translation work) | `/Users/wangzili/Documents/REU2026/isabelle-group` |
 
 On another machine, update the last column (or add a row per machine).
 Last surveyed 2026-10-02.
@@ -105,7 +106,75 @@ semantics diverge.
   progression code (has `codegen/`).
 - `ROOT/sabre/`: submodule `github.com/cgjohannsen/sabre` (unrelated? UNKNOWN).
 
+## REU 2026 Isabelle work — `REU/isabelle/` (unpublished; surveyed 2026-10-02, commit `14fdbbe`)
+- `MLTL_Properties_Extended.thy` (2479 lines): extra equivalences, CE lemmas,
+  BNF, unrolling/shift lemmas, `mltl_eval` + `mltl_eval_correct`,
+  `MLTL_SAT`, atoms/`atomics_agree_semantics`, plus R2U2-specific parse tree
+  and r2u2-form. Ported (minus R2U2 parts) into `mltl-core/src/properties.rs`
+  (D17). Distinct from (newer than) `ROOT/isabelle/MLTL_Properties_Extended.thy`.
+- **MLTL SAT solver** (owner-confirmed, D18): `MLTL_SAT_Solver.thy`,
+  `MLTL_To_SAT.thy`, `Fast_MLTL_To_SAT*.thy`, `MLTL_CNF_Encoder.thy`,
+  `Tseytin_CNF_Lists.thy`, `Prop_To_SAT_Solver.thy`,
+  `SAT_Solver_Locale_Executable.thy`, … Not yet surveyed (T7.1).
+
+## libmltl (owner's current evaluator; performance baseline for M10)
+- https://github.com/lmarzen/libmltl, surveyed at commit `19d8cfc`
+  (2026-10-02). Since 2026-10-03 a git submodule at `REPO/external/libmltl`
+  (D24), pinned to `19d8cfc`; read-only. C++ with pybind11
+  Python bindings, LGPL-2.1. `src/ast.cc` (509 lines): AST of
+  `shared_ptr<ASTNode>` with virtual `evaluate_subt(trace, begin, end)`.
+- Trace format: `vector<string>`, one '0'/'1' char per atom per step;
+  atoms `p<N>`; extra operators `^` (xor), `->`, `<->`/`=`; constants
+  `t/tt/true`, `f/ff/false`.
+- Algorithm: top-down recursive with short-circuit, one trace at a time —
+  same complexity class as `mltl_eval`, O(|φ|·W^d) per trace.
+- **BUG (external tool, D22): wrong semantics on short traces** — temporal loops stop at the
+  trace end (`idx_end = min(begin+ub+1, end)`) instead of evaluating the
+  child on the empty suffix. Checked 2026-10-02 (compiled `src/*.cc`, trace
+  `["1"]` = `[{p0}]`): `F[0,2] !p0` → 0 (AFP: True, our `example_future_not`),
+  `G[0,2] p0` → 1 (AFP: False, `example_global`), `!(F[0,2] p0)` → 0 (agrees).
+  Expected (UNPROVEN): the two agree whenever `len π ≥ complen φ`.
+- `tests/perf_compare/benchmark.cc`: 2048 random traces, 4 vars, lengths
+  4…1024, formulas from `MLTL_interpreter/formulas.txt` with bounds
+  rewritten to `[0, len/2]` — use as the M10 benchmark. First comparison
+  (2026-10-03, libmltl's own `benchmark.cc`, 2048 traces; ours via a since-
+  removed example): eval-only seconds at length 4/64/128/256/512/1024:
+  libmltl 0.066/0.385/1.137/3.57/12.8/48.5; top-down
+  0.110/0.439/0.999/2.73/8.64/30.7; bottom-up 1.20/4.64/8.22/15.1/29.7/58.8.
+  Superseded by the benchmark suite in `src/mltl-core/benchmarks` (D24),
+  which feeds identical inputs to all evaluators.
+
+## R2U2 benchmark copy — `REPO/external/r2u2` (submodule, D25)
+- https://github.com/R2U2/r2u2 branch `develop`, pinned at `5573897`
+  (surveyed 2026-10-03). Read-only. Rust monitor API used: `get_monitor`,
+  `update_binary_file`, `load_bool_signal`, `monitor_step`,
+  `get_output_buffer`, `get_overflow_error`; outputs `r2u2_output { spec_num,
+  verdict: { time, truth } }` (a verdict covers all times ≤ `time`).
+- C2PO (`compiler/c2po.py`, pure-stdlib Python ≥ 3.9): `--spec f.mltl
+  --output f.bin`; MLTL format with atoms `a<N>` mapped to signal N. ~0.4 s
+  per invocation. Rejects constant formulas ("found constant formula ... not
+  supported").
+- **BUG found (R2U2, 2026-10-03):** `Monitor::reset`
+  (`monitors/rust/r2u2_core/src/memory/monitor.rs`) sets
+  `bz_program_count.max_program_count = 0` twice and never resets
+  `mltl_program_count.max_program_count`, so `update_binary_file` on a reused
+  monitor appends to the MLTL instruction table until it overflows
+  (index-out-of-bounds panic in `process_binary.rs`). Benchmark driver works
+  around it. Candidate upstream fix (owner's call). Also present in `ROOT/r2u2`
+  (`f4ae1358`), the copy M8 will verify.
+- **BUG found (R2U2, 2026-10-03): infinite loop on constant operands.** In
+  `engines/mltl.rs : check_operand_data`, `MLTL_OP_TYPE_DIRECT` (constant)
+  operands return a verdict on every engine re-loop (atomics only on
+  `FirstLoop`); `push_result` then marks progress, so `r2u2_engine_step`'s
+  `while start_time == monitor.time_stamp` re-loop never ends. Triggered by
+  any C2PO output with a constant TL operand, e.g. `(!a0|true)` →
+  `or n1 True`, `F[0,2]true`, `(false|false)`. Reproduced with the benchmark
+  driver (per-formula 2 s timeouts). Benchmarks exclude such formulas
+  (detected from C2PO's printed assembly) as unsupported.
+- Memory bounds (`internals/bounds.rs`): `R2U2_MAX_QUEUE_SLOTS` (default
+  2048), `R2U2_MAX_TL_INSTRUCTIONS` (256), etc., overridable by env vars at
+  compile time.
+
 ## Not on this machine
 - **WEST Rust implementation** — https://github.com/zwang271/WEST (owner's
   public repo; D9). To be brought in as a fork submodule under `vendor/`.
-- **MLTL SAT solver** Isabelle formalization — verified, unpublished. Location UNKNOWN.

@@ -15,13 +15,13 @@ checklist.
 ```
 M1 toolchain ─> M2 mltl-core ─┬─> M3 parser ─> M4 progression ─> M5 lang-partition
                                ├─(Q10 fork)──> M6 WEST in place
-                               ├─(Q3, deferred)> M7 SAT
+                               ├─(after M5)───> M7 SAT
                                └─(Q10 fork)──> T8.1–T8.3 survey ─> M8 R2U2
 M9 cross-cutting runs alongside from M2 on.
 ```
 
 Order (D12): M1 → M2 → M3 parser → M4 → M5, with M6/M8 started once fork URLs
-(Q10) exist; M7 deferred (Q3). Formula progression is the smallest algorithm
+(Q10) exist; M7 after M5 (source: D18). Formula progression is the smallest algorithm
 (2.3k Isabelle lines) and stress-tests the core before the big ones (LP proof
 6.7k lines, WEST proofs 6k, R2U2).
 
@@ -29,7 +29,7 @@ Order (D12): M1 → M2 → M3 parser → M4 → M5, with M6/M8 started once fork
 Resolved: D9 (Verus latest + reproduce pin; forks as submodules under
 `vendor/`; WEST URL), D10 (parser syntax), D11 (R2U2 theorem), D12 (order).
 Remaining: Q10 fork URLs (blocks M6/M8), Q11 identifier syntax (T3.1),
-Q3 SAT source (deferred, blocks M7).
+Q3 resolved (D18).
 
 ## M1 — Toolchain and skeleton — DONE 2026-10-02
 - T1.1 DONE 2026-10-02 (`0.2026.09.27.3cf1832`). (S) Install the latest Verus release binary (bundles Z3) (D9); record exact
@@ -66,16 +66,21 @@ at T2.1.
   `Prop` needs nonempty trace, F/U need `len > a`, G/R vacuous when `len ≤ a`,
   R's `b-1`). Port the `value`/example lemmas from `MLTL_Encoding.thy` as
   proof tests.
-- T2.4 (M) Spec fns: `intervals_welldef`, `semantic_equiv`, `depth_mltl`,
+- T2.4 DONE 2026-10-02 (`properties.rs`). (M) Spec fns: `intervals_welldef`, `semantic_equiv`, `depth_mltl`,
   `subformulas`, `convert_nnf`, `complen_mltl`, `make_empty_trace`.
-- T2.5 (M) Downstream lemma inventory: grep `WEST_Proofs`,
+- T2.5 PARTIAL 2026-10-02: usage counts per `MLTL_Properties` name in
+  `correspondence/mission-time-ltl.md`; still to do: inventory of lemmas the
+  downstream theories need that are NOT in `MLTL_Properties` (do per milestone).
+  (M) Downstream lemma inventory: grep `WEST_Proofs`,
   `MLTL_Formula_Progression`, `MLTL_Language_Partition_Proof`, and local
   `ROOT/isabelle/*.thy` for uses of `MLTL_Properties` lemmas; list them in the
   correspondence page with a priority (used by N downstream theories).
-- T2.6 (L) Port prioritized lemmas; must-haves: `convert_nnf` preserves
+- T2.6 DONE 2026-10-02: ported the *whole* theory, nothing skipped.
+  T2.6b DONE 2026-10-02 (D17): REU `MLTL_Properties_Extended` minus R2U2 parts. (L) Port prioritized lemmas; must-haves: `convert_nnf` preserves
   semantics + well-definedness, `semantic_equiv` is an equivalence, complen
   facts. Lemmas never used downstream → SKIPPED unless cheap.
-- T2.7 (M) Exec: `convert_nnf` exec ensures `== spec`; `eval(trace, f) -> bool`
+- T2.7 DONE 2026-10-03 (D20, D21): exec `convert_nnf`, `convert_bnf`
+  (properties.rs), exec `mltl_eval` (eval.rs). (M) Exec: `convert_nnf` exec ensures `== spec`; `eval(trace, f) -> bool`
   proved equal to `semantics_mltl` (first real exec-vs-spec proof; also a test
   oracle for everything after). Overflow preconditions on bounds documented.
 - T2.8 (S) Generic-vs-`nat` instantiation story written down (WEST/R2U2 use
@@ -154,7 +159,7 @@ Upstream https://github.com/zwang271/WEST; blocked by Q10 (fork). Source: AFP `W
 - Exit: real WEST code `VERIFIED` correct w.r.t. `semantics_mltl`.
 
 ## M7 — MLTL SAT solver
-DEFERRED (Q3: source not public yet). T7.1 survey + correspondence page; then the same
+Source: `REU/isabelle/` (D18). T7.1 survey + correspondence page; then the same
 spec → exec → main-theorem pattern as M4. Sized after survey.
 
 ## M8 — R2U2 in place (goal 3)
@@ -196,3 +201,43 @@ Blocked by Q10 (fork). Target theorem: D11. Sources: `ROOT/r2u2/monitors/rust/r2
 - T9.3 Trusted-base audit at each milestone exit.
 - T9.4 Verification-time budget: record per-crate times; split slow proofs.
 - T9.5 Benchmarks vs Isabelle-exported code for each algorithm.
+
+## M10 — Fast verified evaluator (IN PROGRESS, owner interest)
+T10.2 SHELVED 2026-10-03 by owner (D28). Full design, estimates, caveats and the
+R2U2 comparison: `m10-batched-eval.md`. Read it before resuming.
+Status 2026-10-03: T10.1 DONE (scalar `mltl_eval_bottom_up`, horizons +
+next arrays, VERIFIED); T10.3 DONE for scalar evaluators (D24: `src/mltl-core/benchmarks`,
+identical inputs to all three, growth-exponent plots; results in its README). Finding: on libmltl's random-trace workload the
+verified top-down evaluator beats libmltl from length 128; scalar bottom-up
+is linear but ~2–10× slower than top-down up to length 1024 (allocation +
+hash lookups, no early exit). The win must come from T10.2 (batching).
+Cheap scalar improvements to try: reuse table buffers, bitset trace view
+instead of HashSet lookups, skip next-array builds for width-1 intervals.
+Context: `goals.md` "Owner interest". Reference oracle = exec `mltl_eval`
+(T2.7). Analysis 2026-10-02:
+- Naive (`mltl_eval`) cost at one position: T(F/G[a,b]φ) = (b-a+1)·T(φ),
+  T(φ U/R[a,b] ψ) = (b-a+1)·(T(φ)+T(ψ)), Boolean ops add. Worst case
+  O(|φ|·W^d), W = max interval width, d = temporal nesting depth;
+  independent of trace length (only positions < complen are read).
+- DP alternative: per subformula ψ compute sat[ψ][i] for i in 0..m, m =
+  min(len, complen φ), plus one "empty suffix" value sat[ψ][len] (MLTL
+  evaluates children on the empty suffix when i+k ≥ len; all such positions
+  share that value). Boolean ops = bitwise. F/G[a,b] = sliding-window OR/AND
+  over [i+a, min(i+b, len)]. U[a,b]: the pair (P,Q) ↦ (acc ↦ Q ∨ (P ∧ acc))
+  forms a monoid with (P1,Q1)·(P2,Q2) = (P1∧P2, Q1∨(P1∧Q2)), so U is also a
+  sliding-window fold; R by duality. Sliding-window folds of any monoid are
+  O(1) amortized per position (van Herk / Gil-Werman block prefix/suffix
+  scans). Total O(|φ|·m), independent of interval widths.
+- Batch across traces (the GA case): bit i of a word = trace i, so every
+  operation above processes 64 (u64) or more (SIMD lanes) traces at once;
+  per-trace lengths handled by "alive" masks + broadcast empty-suffix
+  values. Fitness = popcount over positive/negative masks.
+- Outside the verified kernel: hash-consing/memoizing sat-vectors of shared
+  subformulas across a GA population.
+- Proof plan: T10.1 scalar per-trace DP proved = spec `mltl_eval`/
+  `semantics_mltl` (uses unrolling/shift lemmas in properties.rs);
+  T10.2 bit-parallel batch proved = per-trace DP (Verus `by (bit_vector)`);
+  T10.3 benchmarks + differential tests vs exec `mltl_eval`. Performance
+  target: beat libmltl (owner's current engine, see sources.md) on its own
+  `tests/perf_compare/benchmark.cc` workload; AFP semantics (D22). Write plain u64
+  loops (let LLVM vectorize); SIMD intrinsics would not be verifiable.
