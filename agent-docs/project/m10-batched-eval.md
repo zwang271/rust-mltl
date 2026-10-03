@@ -115,9 +115,9 @@ is "basically R2U2", since SCQs are circular buffers. Answer recorded:
     wide as the parent's interval. Streaming van Herk needs a block to end
     before its S sweep → ~2w entries per operand, fixed latency ~w.
   - R2U2 SCQ: verdicts produced but not yet consumable because a sibling
-    lags. Size = delay skew `max(0, max sibling wpd − bpd) + 1` (D27), not
+    lags. Size = delay skew `max(0, max sibling wpd − bpd) + 1` (D23), not
     interval width. Operators are incremental (few words of state, no window).
-  - C2PO numbers (D27) vs windowed estimate: F[0,1000] p → 3 vs ~1000;
+  - C2PO numbers (D23) vs windowed estimate: F[0,1000] p → 3 vs ~1000;
     p U[0,1000] q → 4 vs ~2000; (G[0,1000] p) ∧ q → 1005 vs ~2000 (both
     need q's 1000-step delay buffer; windowed also needs p's G window).
 - Windowed bottom-up becomes R2U2 by: (1) time-major evaluation (forced by

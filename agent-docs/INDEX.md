@@ -1,46 +1,67 @@
-# agent-docs — index (source of truth for agents)
+# agent-docs
 
-Start here. Read the "always" pages, then whatever matches your task.
-Rules for maintaining this folder live in `../AGENTS.md` §3.1.
+Agents' working memory for this project. Start here; read the "always" pages,
+then what your task needs. Ground rules are in `../AGENTS.md` §3–5.
+
+## What belongs here (D30)
+- Current state, decisions with their reasons, and hard-won technical
+  knowledge: correspondence tables, Verus pitfalls, facts about external
+  tools. Nothing else.
+- Not here: conversation summaries, who-said-what, step-by-step narratives,
+  superseded material. Git has the history.
+- Plain language. IDs (D… decisions, Q… questions, T… tasks, M… milestones)
+  are allowed as cross-references between these pages, but **never** use
+  them, or any other agent-docs term, when talking to the owner or writing
+  human docs. Say what you mean in words.
+- Size budget: about 200 lines per page. Over that, tighten or split.
 
 ## Always read
-- `status.md` — what exists right now, what's in flight, what's broken.
-- `project/goals.md` — the six goals, scope, non-goals, guiding principles.
-- `decisions.md` — decision log (append-only; supersede, don't delete).
-- `open-questions.md` — unresolved questions that block or shape work.
+- `status.md`: what exists, what's next.
+- `decisions.md`: current decisions and why.
+- `open-questions.md`: what is waiting on the owner.
+- `project/goals.md`: goals, scope, principles.
 
 ## By topic
 | Topic | Page |
 |---|---|
-| Where every upstream formalization / implementation lives | `project/sources.md` |
-| Planned crate/module layout | `project/architecture.md` |
-| Phased plan (coarse) | `project/roadmap.md` |
-| Task-level work plan (milestones M0–M9, task IDs T*.*) | `project/plan.md` (human summary: `../PLAN.md`) |
-| M10 batched (bit-parallel) evaluator design, SHELVED | `project/m10-batched-eval.md` |
-| Verus toolchain, versions, how to run, Verus gotchas | `verification/verus-notes.md` |
-| Throwaway feasibility spikes (not built) | `verification/spikes/` |
-| Ledger of every trusted assumption (`assume`, `external_body`, …) | `verification/trusted-base.md` |
-| Isabelle ↔ Rust correspondence tables (one page per component) | `correspondence/` (exists: `mission-time-ltl.md`) |
-| Per-module design notes (one page per `src/` module, created as modules appear) | `modules/` (exists: `mltl-core.md`) |
-| Human-facing docs that need a human-approved update | `human-doc-backlog.md` |
+| Where every external source lives (placeholders `REPO`, `ROOT`, `AFP`, `REU`) | `project/sources.md` |
+| Milestones and tasks | `project/plan.md` (owner's summary: `../PLAN.md`) |
+| Shelved batched-evaluator design | `project/m10-batched-eval.md` |
+| Ideas and possible new directions | `ideas.md` |
+| Planned crate layout | `project/architecture.md` |
+| Verus: toolchain, commands, pitfalls | `verification/verus-notes.md` |
+| Everything trusted without proof | `verification/trusted-base.md` |
+| Isabelle ↔ Rust tables | `correspondence/` |
+| Per-module notes | `modules/` |
+| Human docs that need an owner-approved fix | `human-doc-backlog.md` |
+| Throwaway spikes (not built) | `verification/spikes/` |
 
-## Status vocabulary
-`VERIFIED` (Verus accepted; note version + command) · `PARTIAL` · `ASSUMED`
-(trusted, in ledger) · `PLANNED` · `UNKNOWN`.
+Status words: `VERIFIED` (Verus accepted it; give version and date),
+`PARTIAL`, `ASSUMED` (trusted, listed in the ledger), `PLANNED`, `UNKNOWN`.
 
-## Maintenance checklist (run at end of every task)
-1. `status.md` reflects reality (snapshot only; list uncommitted work there).
-2. New decisions → `decisions.md`; resolved questions moved out of `open-questions.md`.
-3. New trust → `verification/trusted-base.md`.
-4. New/changed spec ↔ Isabelle mapping → `correspondence/<component>.md`.
-5. This index still lists every page.
-6. If asked to commit: the commit message is the history entry (D7) — say
-   what changed and why, reference D/Q/T IDs. Commit as the agent (D8):
-   `git commit --author="Claude Code (agent) <noreply@anthropic.com>" --trailer "Agent: Claude Code (<model id>)" -m ...`
+## End of every task
+1. `status.md` is true; uncommitted work is listed there.
+2. Decisions and answered questions are recorded (edit entries, don't append
+   duplicates).
+3. New trust goes in `verification/trusted-base.md`; new Isabelle mappings in
+   `correspondence/`.
+4. When committing: the message says what changed and why; commit as the
+   agent (D8): `git commit --author="Claude Code (agent) <noreply@anthropic.com>" --trailer "Agent: Claude Code (<model id>)"`.
 
-## History and dates (D7)
-- Chronology of edits = git (`git log`, `git blame`). Don't keep manual changelogs.
-- Do write dates for: decision entries; facts about *external* state
-  ("upstream r2u2 has X as of YYYY-MM-DD", survey dates); verification claims
-  (date + Verus version + command). Git can't tell when the outside world was
-  observed, or which tool produced a result.
+## Housekeeping
+Run it when any of these happens, and note the date in `status.md`:
+- a milestone finishes;
+- `decisions.md` gains about 8 entries since the last pass, or any page
+  exceeds its size budget;
+- the owner asks.
+
+Checklist:
+1. **True:** check every claim in `status.md`, `plan.md`, and module pages
+   against the code (rerun `scripts/verify.sh`).
+2. **Prune:** delete superseded or finished detail (done tasks become one
+   line), merge duplicate decisions, drop stale numbers and paths.
+3. **Plain:** remove jargon that has crept in; check `human-doc-backlog.md`.
+4. **Reflect:** reread `project/goals.md`, `decisions.md` and recent commits,
+   and update `ideas.md`: what we learned, risks, new directions.
+5. **Report to the owner** in at most ~10 plain lines: what changed, the 1–3
+   most interesting ideas, and any decision needed. No IDs, no doc tour.

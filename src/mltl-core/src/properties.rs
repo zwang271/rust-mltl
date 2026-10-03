@@ -2415,7 +2415,7 @@ pub proof fn atomics_agree_semantics<A>(pi: Seq<Set<A>>, pi2: Seq<Set<A>>, f: Ml
 }
 
 // ---------------------------------------------------------------------------
-// Executable normal-form conversions (D20, D21): exec `convert_nnf` /
+// Executable normal-form conversions (D20, D20): exec `convert_nnf` /
 // `convert_bnf` return exactly the spec result, so every lemma about
 // `convert_nnf_spec` / `convert_bnf_spec` applies to their output.
 // ---------------------------------------------------------------------------

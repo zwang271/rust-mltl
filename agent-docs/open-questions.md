@@ -18,7 +18,7 @@ Ask the owner when a question blocks work; move answered items to
 - **Q10 — Fork URLs** (D9). Owner to create forks of `R2U2/r2u2` and (if a
   fork rather than a branch is wanted for an owner-owned repo)
   `zwang271/WEST`, and give URLs. Blocks T6.1, T8.1-onward.
-  DEFERRED by owner 2026-10-02 (D14).
+  Deferred by the owner (2026-10-02).
 - **Q11 — Identifier syntax** for parser atoms (D10): which characters, can
   identifiers clash with keywords (`F`, `G`, `U`, `R`, `true`, `false`, …),
   case sensitivity? Agent proposes in T3.1, owner confirms.

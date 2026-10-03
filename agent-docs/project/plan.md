@@ -1,92 +1,28 @@
-# Detailed work plan (agent-facing)
+# Work plan
 
-Status: ACCEPTED by owner 2026-10-02 with changes D9–D12 (inline answers in
-`PLAN.md`). Human summary: `../../PLAN.md`
-(keep the two in sync — if you change milestones/order here, log a backlog item
-in `../human-doc-backlog.md` for `PLAN.md`). Coarse phases: `roadmap.md`.
-
-Conventions: task IDs `T<milestone>.<n>`; size S (≤1 day agent work), M (days),
-L (week+), XL (multi-week, split further when started). "Exit" = the condition
-that marks the milestone done. Every task ends with the INDEX.md maintenance
-checklist.
-
-## Ordering and dependencies
+Milestones and tasks. Owner's plain-language summary: `../../PLAN.md` (if
+the order or scope here changes, add a `human-doc-backlog.md` entry for it).
+Task IDs `T<milestone>.<n>`. Sizes: S ≈ a day, M days, L a week+, XL weeks.
+Order and reasons: D12.
 
 ```
-M1 toolchain ─> M2 mltl-core ─┬─> M3 parser ─> M4 progression ─> M5 lang-partition
-                               ├─(Q10 fork)──> M6 WEST in place
-                               ├─(after M5)───> M7 SAT
-                               └─(Q10 fork)──> T8.1–T8.3 survey ─> M8 R2U2
-M9 cross-cutting runs alongside from M2 on.
+M1 toolchain ─> M2 mltl-core ─┬─> M3 parser ─> M4 progression ─> M5 lang-partition ─> M7 SAT
+                               ├─(fork URLs)─> M6 WEST in place
+                               └─(fork URLs)─> M8 R2U2 in place
+M9 cross-cutting, alongside.   M10 fast evaluator: scalar part done, batching shelved.
 ```
 
-Order (D12): M1 → M2 → M3 parser → M4 → M5, with M6/M8 started once fork URLs
-(Q10) exist; M7 after M5 (source: D18). Formula progression is the smallest algorithm
-(2.3k Isabelle lines) and stress-tests the core before the big ones (LP proof
-6.7k lines, WEST proofs 6k, R2U2).
-
-## M0 — Owner decisions — DONE 2026-10-02
-Resolved: D9 (Verus latest + reproduce pin; forks as submodules under
-`vendor/`; WEST URL), D10 (parser syntax), D11 (R2U2 theorem), D12 (order).
-Remaining: Q10 fork URLs (blocks M6/M8), Q11 identifier syntax (T3.1),
-Q3 resolved (D18).
-
-## M1 — Toolchain and skeleton — DONE 2026-10-02
-- T1.1 DONE 2026-10-02 (`0.2026.09.27.3cf1832`). (S) Install the latest Verus release binary (bundles Z3) (D9); record exact
-  version, install path, rustup toolchain in `../verification/verus-notes.md`.
-- T1.2 DONE 2026-10-02 (`cargo verus verify --workspace` via `scripts/verify.sh`). (S) Decide `cargo verus` vs raw `verus` invocation; root `Cargo.toml`
-  workspace with members under `src/`; a `scripts/verify.sh` that verifies all
-  crates and exits non-zero on failure.
-- T1.3 DONE 2026-10-02. (S) Trivial crate `src/mltl-core` with one verified lemma; verify
-  passes. Create `src/mltl-core/README.md` (AGENTS.md §3.3).
-- T1.4 DONE 2026-10-02 (results + gotchas in verus-notes; code in
-  `verification/spikes/m1-semantics-spike.rs`). Generic exec atoms (`Vec<A>`,
-  `A: Eq`) NOT tested — exec side specialised to `usize` atoms. (M) Feasibility spikes, each recorded in verus-notes (works / fails +
-  error text):
-  - recursive enum with `Box` children: spec fn with `decreases`, exec fn
-    over it, `height`/`size` measures;
-  - generic atom type `A` with `Set<A>` in spec and something executable
-    (`Vec<A>` with `A: Eq`? bitset for `nat` atoms?);
-  - spec fn over `Seq<Set<A>>` with nat arithmetic (truncating `b-1`);
-  - `Vec<Vec<bool>>`/bitvector trace with `view()` to `Seq<Set<nat>>`.
-- Exit: one command verifies the workspace; spike results documented.
-
-## M2 — mltl-core (goal 1, 2)
-Source: AFP `Mission_Time_LTL` (`MLTL_Encoding.thy`, `MLTL_Properties.thy`).
-Create `../correspondence/mission-time-ltl.md` and `../modules/mltl-core.md`
-at T2.1.
-- T2.1 DONE 2026-10-02 (D15). (S) Design decision (record as D-entry): one `Formula<A>` enum used in
-  both spec and exec, bounds `usize`/`u64` viewed as `nat`, vs. separate
-  spec/exec types with `view`. Prefer one type unless T1.4 shows a problem.
-  T1.4 evidence: one generic enum with `usize` bounds works in spec and exec;
-  `view_f` maps `Formula<usize>` atoms to `Formula<nat>`. Traces: D16 (finite `Set`).
-- T2.2 DONE 2026-10-02 (`mltl.rs`; also `atoms_mltl`). (S) Syntax: 10 constructors mirroring `'a mltl`; `implies_mltl`,
-  `iff_mltl` as spec fns (Isabelle definitions, not constructors).
-- T2.3 DONE 2026-10-02 (+ Until/Release sanity checks). (M) `semantics_mltl` spec over `Seq<Set<A>>`, case-for-case (incl.
-  `Prop` needs nonempty trace, F/U need `len > a`, G/R vacuous when `len ≤ a`,
-  R's `b-1`). Port the `value`/example lemmas from `MLTL_Encoding.thy` as
-  proof tests.
-- T2.4 DONE 2026-10-02 (`properties.rs`). (M) Spec fns: `intervals_welldef`, `semantic_equiv`, `depth_mltl`,
-  `subformulas`, `convert_nnf`, `complen_mltl`, `make_empty_trace`.
-- T2.5 PARTIAL 2026-10-02: usage counts per `MLTL_Properties` name in
-  `correspondence/mission-time-ltl.md`; still to do: inventory of lemmas the
-  downstream theories need that are NOT in `MLTL_Properties` (do per milestone).
-  (M) Downstream lemma inventory: grep `WEST_Proofs`,
-  `MLTL_Formula_Progression`, `MLTL_Language_Partition_Proof`, and local
-  `ROOT/isabelle/*.thy` for uses of `MLTL_Properties` lemmas; list them in the
-  correspondence page with a priority (used by N downstream theories).
-- T2.6 DONE 2026-10-02: ported the *whole* theory, nothing skipped.
-  T2.6b DONE 2026-10-02 (D17): REU `MLTL_Properties_Extended` minus R2U2 parts. (L) Port prioritized lemmas; must-haves: `convert_nnf` preserves
-  semantics + well-definedness, `semantic_equiv` is an equivalence, complen
-  facts. Lemmas never used downstream → SKIPPED unless cheap.
-- T2.7 DONE 2026-10-03 (D20, D21): exec `convert_nnf`, `convert_bnf`
-  (properties.rs), exec `mltl_eval` (eval.rs). (M) Exec: `convert_nnf` exec ensures `== spec`; `eval(trace, f) -> bool`
-  proved equal to `semantics_mltl` (first real exec-vs-spec proof; also a test
-  oracle for everything after). Overflow preconditions on bounds documented.
-- T2.8 (S) Generic-vs-`nat` instantiation story written down (WEST/R2U2 use
-  `nat` atoms).
-- Exit: all `MLTL_Encoding` + listed `MLTL_Properties` items `VERIFIED` or
-  `SKIPPED` with reason; zero unrecorded trust.
+## Done
+- **M1 toolchain** (2026-10-02): Verus installed, `scripts/verify.sh`
+  verifies the workspace; feasibility spike in `verification/spikes/`.
+- **M2 mltl-core** (2026-10-03): `MLTL_Encoding`, all of `MLTL_Properties`,
+  non-R2U2 `MLTL_Properties_Extended`; executable `convert_nnf`,
+  `convert_bnf`, evaluators. Details: `correspondence/mission-time-ltl.md`,
+  `modules/mltl-core.md`. Left over:
+  - T2.5: inventory of lemmas the downstream theories need beyond
+    `MLTL_Properties`. Do it per milestone, at its start.
+  - T2.8: write down how generic atoms meet `usize` atoms (mostly settled
+    by D19).
 
 ## M3 — Verified parser/printer (goal 6)
 Syntax per D10 (AFP-style, arbitrary identifiers). Create `correspondence/parser.md`, `modules/mltl-parse.md`.
@@ -202,42 +138,14 @@ Blocked by Q10 (fork). Target theorem: D11. Sources: `ROOT/r2u2/monitors/rust/r2
 - T9.4 Verification-time budget: record per-crate times; split slow proofs.
 - T9.5 Benchmarks vs Isabelle-exported code for each algorithm.
 
-## M10 — Fast verified evaluator (IN PROGRESS, owner interest)
-T10.2 SHELVED 2026-10-03 by owner (D28). Full design, estimates, caveats and the
-R2U2 comparison: `m10-batched-eval.md`. Read it before resuming.
-Status 2026-10-03: T10.1 DONE (scalar `mltl_eval_bottom_up`, horizons +
-next arrays, VERIFIED); T10.3 DONE for scalar evaluators (D24: `src/mltl-core/benchmarks`,
-identical inputs to all three, growth-exponent plots; results in its README). Finding: on libmltl's random-trace workload the
-verified top-down evaluator beats libmltl from length 128; scalar bottom-up
-is linear but ~2–10× slower than top-down up to length 1024 (allocation +
-hash lookups, no early exit). The win must come from T10.2 (batching).
-Cheap scalar improvements to try: reuse table buffers, bitset trace view
-instead of HashSet lookups, skip next-array builds for width-1 intervals.
-Context: `goals.md` "Owner interest". Reference oracle = exec `mltl_eval`
-(T2.7). Analysis 2026-10-02:
-- Naive (`mltl_eval`) cost at one position: T(F/G[a,b]φ) = (b-a+1)·T(φ),
-  T(φ U/R[a,b] ψ) = (b-a+1)·(T(φ)+T(ψ)), Boolean ops add. Worst case
-  O(|φ|·W^d), W = max interval width, d = temporal nesting depth;
-  independent of trace length (only positions < complen are read).
-- DP alternative: per subformula ψ compute sat[ψ][i] for i in 0..m, m =
-  min(len, complen φ), plus one "empty suffix" value sat[ψ][len] (MLTL
-  evaluates children on the empty suffix when i+k ≥ len; all such positions
-  share that value). Boolean ops = bitwise. F/G[a,b] = sliding-window OR/AND
-  over [i+a, min(i+b, len)]. U[a,b]: the pair (P,Q) ↦ (acc ↦ Q ∨ (P ∧ acc))
-  forms a monoid with (P1,Q1)·(P2,Q2) = (P1∧P2, Q1∨(P1∧Q2)), so U is also a
-  sliding-window fold; R by duality. Sliding-window folds of any monoid are
-  O(1) amortized per position (van Herk / Gil-Werman block prefix/suffix
-  scans). Total O(|φ|·m), independent of interval widths.
-- Batch across traces (the GA case): bit i of a word = trace i, so every
-  operation above processes 64 (u64) or more (SIMD lanes) traces at once;
-  per-trace lengths handled by "alive" masks + broadcast empty-suffix
-  values. Fitness = popcount over positive/negative masks.
-- Outside the verified kernel: hash-consing/memoizing sat-vectors of shared
-  subformulas across a GA population.
-- Proof plan: T10.1 scalar per-trace DP proved = spec `mltl_eval`/
-  `semantics_mltl` (uses unrolling/shift lemmas in properties.rs);
-  T10.2 bit-parallel batch proved = per-trace DP (Verus `by (bit_vector)`);
-  T10.3 benchmarks + differential tests vs exec `mltl_eval`. Performance
-  target: beat libmltl (owner's current engine, see sources.md) on its own
-  `tests/perf_compare/benchmark.cc` workload; AFP semantics (D22). Write plain u64
-  loops (let LLVM vectorize); SIMD intrinsics would not be verifiable.
+## M10 — Fast verified evaluator
+- Done: verified scalar bottom-up evaluator (`eval.rs`) and the benchmark
+  suite (`src/mltl-core/benchmarks/`, results in its README). Bottom-up is
+  linear in trace length and formula size, and 2.6–9× faster than libmltl,
+  R2U2 and top-down on heavy workloads. On random traces with wide windows,
+  early-exit evaluators win on constants.
+- Shelved: T10.2, the bit-parallel batch over many traces (D28; design in
+  `m10-batched-eval.md`).
+- Cheap next steps if resumed (see `ideas.md`): bitset trace view instead of
+  `HashSet` lookups, reused table buffers, skipping next-arrays for width-1
+  intervals.

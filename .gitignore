@@ -1,4 +1,4 @@
-# Local-only docs (D5, D6 in agent-docs/decisions.md)
+# Local-only docs: the CLAUDE.md shim and the owner-annotated PLAN.md
 /CLAUDE.md
 /PLAN.md
 
@@ -17,3 +17,6 @@ src/mltl-core/benchmarks/workloads/
 src/mltl-core/benchmarks/build/
 __pycache__/
 src/mltl-core/benchmarks/r2u2_driver/target/
+
+# Agent worktrees
+/.claude/worktrees/

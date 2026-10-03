@@ -50,7 +50,7 @@ local `ROOT/isabelle` R2U2 theories — guides what later milestones rely on.
 | `release_until_dual2` | same (+ helper `not_until_not_unfold`) | proof | | Uses new helper `lemma_first_failure` (first index where a predicate fails) instead of Isabelle's linorder/smt steps. |
 | `release_until_dual`, `until_release_dual` | same | proof | 0/0/0/4, 0/0/0/1 | |
 | `release_and_distribute` | same | proof | | Via the duals + `until_or_distribute`, as Isabelle. |
-| `convert_nnf` | `convert_nnf_spec` (spec, D21); exec `convert_nnf` (+ helper `convert_nnf_not`) with `ensures r == convert_nnf_spec(*f)` | spec + exec | | Termination of spec: `decreases depth_mltl(f) via convert_nnf_spec_decreases`. Exec on `Mltl<usize>` (D19); `convert_nnf_not` computes `convert_nnf (Not g)` without cloning. |
+| `convert_nnf` | `convert_nnf_spec` (spec, D20); exec `convert_nnf` (+ helper `convert_nnf_not`) with `ensures r == convert_nnf_spec(*f)` | spec + exec | | Termination of spec: `decreases depth_mltl(f) via convert_nnf_spec_decreases`. Exec on `Mltl<usize>` (D19); `convert_nnf_not` computes `convert_nnf (Not g)` without cloning. |
 | `convert_nnf_preserves_semantics` | same | proof | 1/0/6/0 | `requires intervals_welldef(f)`; per-trace. |
 | `convert_nnf_form_Not_Implies_Prop` | `convert_nnf_form_not_implies_prop` | proof | 0/0/7/0 | snake_case name. |
 | `convert_nnf_convert_nnf` | same | proof | 26/0/0/0 | |
@@ -89,7 +89,7 @@ but nothing ported here uses it.
 | `not_CE`, `and_CE_left/right`, `or_CE_left/right`, `globally_CE`, `future_CE`, `until_CE_left/right`, `release_CE_left/right` | `not_ce`, `and_ce_left`, … (snake_case) | proof | Helper `lemma_equiv_suffixes` (not in Isabelle) instantiates `≡_m` on suffixes. |
 | `inductive is_bnf` + `inductive_simps` | `is_bnf` | spec | Inductive predicate → recursive spec fn following the `inductive_simps` equations (Verus has no inductive predicates). |
 | `is_bnf.induct` (auto-generated) | `is_bnf_induct` | proof | Lemma over `p: spec_fn`, one `requires` per intro rule (with `is_bnf` premises, as the generated rule). |
-| `convert_bnf` | `convert_bnf_spec` (spec, D21); exec `convert_bnf`, `ensures r == convert_bnf_spec(*f)` | spec + exec | |
+| `convert_bnf` | `convert_bnf_spec` (spec, D20); exec `convert_bnf`, `ensures r == convert_bnf_spec(*f)` | spec + exec | |
 | `convert_bnf_is_bnf`, `convert_bnf_welldef`, `convert_bnf_equiv`, `convert_bnf_complen`, `bnf_convert_bnf`, `convert_bnf_convert_bnf` | same | proof | |
 | `{until,future,global,release}_base_mltl_semantics` | same | proof | |
 | `{until,future,global,release}_unrolling_mltl_semantics` | same | proof | `a+1` → `(a + 1) as usize` (fits since `a < b`). Helper `lemma_complen_bound`. |
@@ -97,7 +97,7 @@ but nothing ported here uses it.
 | `semantic_shift_F/U/G/R` | `semantic_shift_f/u/g/r` | proof | `b-k` → `(b - k) as usize`. |
 | `semantic_unroll_F/U/G/R` | `semantic_unroll_f/u/g/r` | proof | |
 | `mltl_eval_interval_width` | same | spec | `b - a` → `nat_sub`. |
-| `function mltl_eval` / `mltl_eval_unchecked` | `mltl_eval_spec` / `mltl_eval_unchecked_spec` (D21); exec `eval.rs : mltl_eval` | spec (+ exec) | Mutual recursion; termination measure (`depth_mltl`, width, 1/0) — Isabelle uses `size` instead of `depth_mltl`. `Suc a` → `(a + 1) as usize` (only reached when `a < b`). Prop case: `pi.len() != 0 && pi[0].contains(q)` (Isabelle: `case π of [] ⇒ False | s#ss ⇒ q ∈ s`). |
+| `function mltl_eval` / `mltl_eval_unchecked` | `mltl_eval_spec` / `mltl_eval_unchecked_spec` (D20); exec `eval.rs : mltl_eval` | spec (+ exec) | Mutual recursion; termination measure (`depth_mltl`, width, 1/0) — Isabelle uses `size` instead of `depth_mltl`. `Suc a` → `(a + 1) as usize` (only reached when `a < b`). Prop case: `pi.len() != 0 && pi[0].contains(q)` (Isabelle: `case π of [] ⇒ False | s#ss ⇒ q ∈ s`). |
 | `mltl_eval_{future,global,until,release}_base` / `_unrolling` | same | proof | |
 | `mltl_eval_unchecked_{future,global,until}_interval`, `mltl_eval_unchecked_release_dual` | same | proof | By recursion on `b - a` (Isabelle: `inc_induct`). |
 | `bounded_forall_unroll`, `bounded_until_unroll` | same | proof | Ported for completeness; the interval proofs don't call them. |

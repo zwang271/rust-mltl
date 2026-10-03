@@ -136,15 +136,10 @@ semantics diverge.
   Expected (UNPROVEN): the two agree whenever `len π ≥ complen φ`.
 - `tests/perf_compare/benchmark.cc`: 2048 random traces, 4 vars, lengths
   4…1024, formulas from `MLTL_interpreter/formulas.txt` with bounds
-  rewritten to `[0, len/2]` — use as the M10 benchmark. First comparison
-  (2026-10-03, libmltl's own `benchmark.cc`, 2048 traces; ours via a since-
-  removed example): eval-only seconds at length 4/64/128/256/512/1024:
-  libmltl 0.066/0.385/1.137/3.57/12.8/48.5; top-down
-  0.110/0.439/0.999/2.73/8.64/30.7; bottom-up 1.20/4.64/8.22/15.1/29.7/58.8.
-  Superseded by the benchmark suite in `src/mltl-core/benchmarks` (D24),
-  which feeds identical inputs to all evaluators.
+  rewritten to `[0, len/2]`. Reproduced (identical inputs) as the `libmltl`
+  workload of `src/mltl-core/benchmarks` (D24).
 
-## R2U2 benchmark copy — `REPO/external/r2u2` (submodule, D25)
+## R2U2 benchmark copy — `REPO/external/r2u2` (submodule, D24)
 - https://github.com/R2U2/r2u2 branch `develop`, pinned at `5573897`
   (surveyed 2026-10-03). Read-only. Rust monitor API used: `get_monitor`,
   `update_binary_file`, `load_bool_signal`, `monitor_step`,
@@ -171,6 +166,15 @@ semantics diverge.
   `or n1 True`, `F[0,2]true`, `(false|false)`. Reproduced with the benchmark
   driver (per-formula 2 s timeouts). Benchmarks exclude such formulas
   (detected from C2PO's printed assembly) as unsupported.
+- How R2U2 sizes memory (checked 2026-10-03): SCQ size per node
+  (`compiler/c2po/scq.py`) = `max(0, max sibling wpd − bpd) + 1`
+  (+ `--scq-constant`), with bpd/wpd accumulated over temporal ancestors in
+  `cpt.py` (lb/ub). Operators are incremental (`engines/mltl.rs`, e.g.
+  `until_operator` keeps only `previous`/`edge`/`next_time`), and `scq_write`
+  compacts equal consecutive verdicts. C2PO `--debug` totals:
+  `F[0,1000] a0` → 3 (rewritten to `true U`), `a0 U[0,1000] a1` → 4,
+  `(G[0,1000] a0) & a1` → 1005 (the a1 queue waits for the G), nested
+  `G[0,8] G[0,8] a0` → 4 without rewrites (C2PO merges nested G's).
 - Memory bounds (`internals/bounds.rs`): `R2U2_MAX_QUEUE_SLOTS` (default
   2048), `R2U2_MAX_TL_INSTRUCTIONS` (256), etc., overridable by env vars at
   compile time.
