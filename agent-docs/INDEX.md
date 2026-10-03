@@ -33,7 +33,8 @@ Rules for maintaining this folder live in `../AGENTS.md` §3.1.
 4. New/changed spec ↔ Isabelle mapping → `correspondence/<component>.md`.
 5. This index still lists every page.
 6. If asked to commit: the commit message is the history entry (D7) — say
-   what changed and why, reference D/Q/T IDs.
+   what changed and why, reference D/Q/T IDs. Commit as the agent (D8):
+   `git commit --author="Claude Code (agent) <noreply@anthropic.com>" --trailer "Agent: Claude Code (<model id>)" -m ...`
 
 ## History and dates (D7)
 - Chronology of edits = git (`git log`, `git blame`). Don't keep manual changelogs.

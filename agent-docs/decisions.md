@@ -53,4 +53,15 @@ decision / consequences.
   written for decisions, observations of external state, and verification
   results (with Verus version + command). Details: `INDEX.md` "History and dates".
 - Consequences: removed `status.md` Log section (its 3 entries are covered by
-  D4, Q5, and commits `3df24c7`, `0edeeac`).
+  D4, Q5, and commits `3df24c7`, `18a654b` — was `0edeeac` before D8 re-authoring).
+
+## D8 (2026-10-02) — Agent vs. owner commits
+- Decision: agent-made commits use author `Claude Code (agent) <noreply@anthropic.com>`
+  and a trailer `Agent: Claude Code (<model id>)`. The committer stays the
+  owner's git identity (agents commit only on the owner's request, so
+  committer = who approved it). Owner commits use the owner's identity, no trailer.
+- Query: agent commits `git log --author='(agent)'`; owner commits
+  `git log --perl-regexp --author='^((?!\(agent\)).)*$'`; `git blame` shows
+  the agent author on agent-written lines.
+- Consequences: existing agent commits (0edeeac, 24ba55f, pre-rewrite hashes)
+  were re-authored this way; `3df24c7` "first commit" is the owner's.
