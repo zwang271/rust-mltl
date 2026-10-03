@@ -22,6 +22,4 @@ Current state only. History is in git.
 
 ## Uncommitted work
 Agents commit only when asked, so list finished-but-uncommitted work here and
-clear it on commit.
-- First housekeeping pass (agent-docs restructure, `.gitignore` comment) on
-  branch/worktree `docs-housekeeping`.
+clear it on commit. (none)
