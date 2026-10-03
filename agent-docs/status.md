@@ -1,8 +1,8 @@
 # Status
 
-Keep this current. Newest entries at top of the log.
+Current state only — no history. History lives in git (D7): `git log -p -- <path>`.
 
-## Snapshot (2026-10-02)
+## Snapshot
 - No Rust code yet. No `Cargo.toml`, no `src/`.
 - Verus: not installed (`which verus` empty). `cargo`/`rustc` present (rustup;
   toolchains `stable`, `1.85.1`).
@@ -19,8 +19,7 @@ Keep this current. Newest entries at top of the log.
 | SAT solver | PLANNED (source location UNKNOWN) |
 | R2U2 in place | PLANNED (upstream already has partial Verus annotations) |
 
-## Log
-- 2026-10-02 — Wrote task-level plan `project/plan.md` + human-facing `../PLAN.md` (PROPOSED, awaiting owner review). Surveyed upstream `r2u2_core` Verus specs (see Q5).
-- 2026-10-02 — Moved out of `MLTL_R2U2-` into standalone repo `REPO` (D4); `git init`, no remote.
-- 2026-10-02 — Phase 0: created doc scaffolding; surveyed sources into
-  `project/sources.md`; recorded D1–D3 and Q1–Q9.
+## Uncommitted work
+Agents don't commit unless asked (AGENTS.md §5), so git history lags the
+working tree. List here anything done but not yet committed, and clear it when
+committed. (none)

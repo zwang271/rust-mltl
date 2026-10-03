@@ -44,3 +44,13 @@ decision / consequences.
 - Decision: commit `agent-docs/` and `AGENTS.md`. `CLAUDE.md` (shim) and
   `PLAN.md` stay git-ignored. agent-docs must not hard-code machine paths; use
   the `REPO`/`ROOT`/`AFP` placeholders defined in `project/sources.md`.
+
+## D7 (2026-10-02) — Git history replaces manual logs
+- Context: repo now has git history; a manual log duplicates it and drifts.
+- Decision: no manual changelogs. `status.md` is a snapshot of current state
+  plus an "Uncommitted work" list (agents only commit on request, so git lags).
+  Commit messages carry the what/why and reference D/Q/T IDs. Dates are still
+  written for decisions, observations of external state, and verification
+  results (with Verus version + command). Details: `INDEX.md` "History and dates".
+- Consequences: removed `status.md` Log section (its 3 entries are covered by
+  D4, Q5, and commits `3df24c7`, `0edeeac`).

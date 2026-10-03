@@ -27,8 +27,17 @@ Rules for maintaining this folder live in `../AGENTS.md` §3.1.
 (trusted, in ledger) · `PLANNED` · `UNKNOWN`.
 
 ## Maintenance checklist (run at end of every task)
-1. `status.md` reflects reality.
+1. `status.md` reflects reality (snapshot only; list uncommitted work there).
 2. New decisions → `decisions.md`; resolved questions moved out of `open-questions.md`.
 3. New trust → `verification/trusted-base.md`.
 4. New/changed spec ↔ Isabelle mapping → `correspondence/<component>.md`.
 5. This index still lists every page.
+6. If asked to commit: the commit message is the history entry (D7) — say
+   what changed and why, reference D/Q/T IDs.
+
+## History and dates (D7)
+- Chronology of edits = git (`git log`, `git blame`). Don't keep manual changelogs.
+- Do write dates for: decision entries; facts about *external* state
+  ("upstream r2u2 has X as of YYYY-MM-DD", survey dates); verification claims
+  (date + Verus version + command). Git can't tell when the outside world was
+  observed, or which tool produced a result.
