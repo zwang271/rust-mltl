@@ -1,0 +1,6 @@
+[submodule "external/libmltl"]
+	path = external/libmltl
+	url = https://github.com/lmarzen/libmltl
+[submodule "external/r2u2"]
+	path = external/r2u2
+	url = https://github.com/R2U2/r2u2
