@@ -4,10 +4,10 @@ Current state only — no history. History lives in git (D7): `git log -p -- <pa
 
 ## Snapshot
 - No Rust code yet. No `Cargo.toml`, no `src/`.
-- Verus: not installed (`which verus` empty). `cargo`/`rustc` present (rustup;
-  toolchains `stable`, `1.85.1`).
+- Verus `0.2026.09.27.3cf1832` installed (T1.1; details `verification/verus-notes.md`).
+  rustup toolchains: `stable`, `1.85.1` (r2u2 pin), `1.98.1` (Verus).
 - Docs: `AGENTS.md`, `CLAUDE.md` (shim), `README.md`, `PLAN.md`, `agent-docs/` created. `.gitignore` ignores CLAUDE.md, PLAN.md (D5, D6); agent-docs + AGENTS.md committed.
-- Plan accepted (D9–D12). Next: M1 toolchain (`project/plan.md`). Open: Q10 fork URLs, Q11.
+- Plan accepted (D9–D12). Next: T1.2 workspace + verify script (`project/plan.md`). Open: Q10 fork URLs, Q11.
 
 | Component | Status |
 |---|---|

@@ -32,7 +32,7 @@ Remaining: Q10 fork URLs (blocks M6/M8), Q11 identifier syntax (T3.1),
 Q3 SAT source (deferred, blocks M7).
 
 ## M1 — Toolchain and skeleton
-- T1.1 (S) Install the latest Verus release binary (bundles Z3) (D9); record exact
+- T1.1 DONE 2026-10-02 (`0.2026.09.27.3cf1832`). (S) Install the latest Verus release binary (bundles Z3) (D9); record exact
   version, install path, rustup toolchain in `../verification/verus-notes.md`.
 - T1.2 (S) Decide `cargo verus` vs raw `verus` invocation; root `Cargo.toml`
   workspace with members under `src/`; a `scripts/verify.sh` that verifies all
