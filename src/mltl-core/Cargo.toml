@@ -12,3 +12,7 @@ verify = true
 
 [lints]
 workspace = true
+
+[[example]]
+name = "bench_driver"
+path = "benchmarks/driver.rs"

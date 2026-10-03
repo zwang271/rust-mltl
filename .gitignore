@@ -10,3 +10,10 @@
 .DS_Store
 .idea/
 .vscode/
+
+# Benchmarks (src/mltl-core/benchmarks): regenerable inputs and build outputs
+src/mltl-core/benchmarks/.venv/
+src/mltl-core/benchmarks/workloads/
+src/mltl-core/benchmarks/build/
+__pycache__/
+src/mltl-core/benchmarks/r2u2_driver/target/

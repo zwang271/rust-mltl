@@ -1,0 +1,15 @@
+# Benchmark driver for the R2U2 Rust monitor (external/r2u2). Deliberately not
+# a member of the rust-mltl workspace: it builds with R2U2's own pinned
+# toolchain (rust-toolchain.toml) and is not verified.
+[package]
+name = "r2u2_driver"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+r2u2_core = { path = "../../../../external/r2u2/monitors/rust/r2u2_core" }
+
+[profile.release]
+opt-level = 3
