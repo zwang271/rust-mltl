@@ -1,6 +1,6 @@
 //! Runtime cross-checks of the two verified evaluators (complements the proofs:
 //! catches build/erasure surprises and documents expected values).
-use mltl_core::eval::{mltl_eval, mltl_eval_bottom_up};
+use mltl_eval::{mltl_eval, mltl_eval_bottom_up};
 use mltl_core::mltl::Mltl;
 use std::collections::HashSet;
 

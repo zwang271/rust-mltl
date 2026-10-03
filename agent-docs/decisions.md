@@ -4,7 +4,7 @@ What is currently decided, grouped by topic, with the reason. This is a
 register, not a log: when a decision changes, edit the entry; delete entries
 that no longer matter (git keeps the history). Each entry is a few lines:
 the decision, why, and what it means for future work. IDs are stable anchors
-for cross-references; give new entries the next free number (next: D31).
+for cross-references; give new entries the next free number (next: D32).
 
 ## Repository, docs and process
 
@@ -94,14 +94,14 @@ for cross-references; give new entries the next free number (next: D31).
 
 ## Evaluators and benchmarks
 
-- **D23 — Two verified evaluators.** `eval.rs` has `mltl_eval` (top-down) and
+- **D23 — Two verified evaluators.** `mltl-eval` has `mltl_eval` (top-down) and
   `mltl_eval_bottom_up` (tables per subformula over the positions that
   matter, plus next-true/next-false arrays). Both are proved equal to
-  `semantics_mltl`. The owner-requested human doc `src/mltl-core/src/EVAL_MLTL.md`
+  `semantics_mltl`. The owner-requested human doc `src/mltl-eval/EVAL_MLTL.md`
   explains both and compares bottom-up with R2U2 (both are bounded by the
   formula for the verdict at position 0; R2U2 also streams in bounded
   memory).
-- **D24 — Benchmark suite.** `src/mltl-core/benchmarks/` compares both
+- **D24 — Benchmark suite.** `src/mltl-eval/benchmarks/` compares both
   evaluators with libmltl and R2U2's Rust monitor (submodules
   `external/libmltl`, `external/r2u2`) on identical input files.
   Python deps live in a local `.venv`. Results and plots are committed;
@@ -111,6 +111,15 @@ for cross-references; give new entries the next free number (next: D31).
   because most of those formulas trigger its constant-operand hang. Heavy
   workloads (traces up to 2M steps, formulas up to ~1,400 nodes) are built
   so every clause holds everywhere, preventing early exits.
+- **D31 — Evaluation is its own crate; optimise first, prove second.**
+  `src/mltl-eval` holds the evaluators (top-down, bottom-up, and the
+  planned bit-row bottom-up), the benchmark suite, and the human docs on
+  algorithms and trace formats. It depends on `mltl-core`. Performance work
+  goes: unverified prototype → benchmark → iterate until clearly faster and
+  stable → prove. Reason (owner): don't spend proof effort on something that
+  turns out slower or still improvable. Each iteration's lessons are kept in
+  `modules/mltl-eval.md`, so that if a proof forces a change we know which
+  fix costs the least speed.
 - **D28 — Batched evaluator shelved.** The bit-parallel, many-traces-at-once
   evaluator is designed but shelved by the owner. Everything needed to
   resume is in `project/m10-batched-eval.md`. On resume, offer an unverified

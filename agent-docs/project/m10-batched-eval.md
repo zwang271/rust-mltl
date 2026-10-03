@@ -7,7 +7,7 @@ original analysis and proof plan are in `plan.md` §M10; this page holds the
 fuller design and the discussion that led to shelving. Decision: D28.
 
 Resume point: the agent offered to build an **unverified prototype** first
-(64-trace bit-sliced F/G/U evaluator in `src/mltl-core/benchmarks/`) to
+(64-trace bit-sliced F/G/U evaluator in `src/mltl-eval/benchmarks/`) to
 replace the speed estimate below with measurements before investing in the
 Verus proof. Owner has not answered; ask when resuming.
 
@@ -139,7 +139,7 @@ is "basically R2U2", since SCQs are circular buffers. Answer recorded:
 
 ## 8. Pending follow-ups
 
-- `src/mltl-core/src/EVAL_MLTL.md` §6, final paragraph ("The two ideas also
+- `src/mltl-eval/EVAL_MLTL.md` §6, final paragraph ("The two ideas also
   combine…") presents the sliding window as a hybrid without saying how
   close it is to R2U2. Agent offered to rewrite it with §6 above; owner did
   not take it up. Tracked in `../human-doc-backlog.md`.

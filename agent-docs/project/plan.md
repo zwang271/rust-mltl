@@ -139,13 +139,16 @@ Blocked by Q10 (fork). Target theorem: D11. Sources: `ROOT/r2u2/monitors/rust/r2
 - T9.5 Benchmarks vs Isabelle-exported code for each algorithm.
 
 ## M10 — Fast verified evaluator
-- Done: verified scalar bottom-up evaluator (`eval.rs`) and the benchmark
-  suite (`src/mltl-core/benchmarks/`, results in its README). Bottom-up is
+- Done: verified scalar bottom-up evaluator (`mltl-eval`) and the benchmark
+  suite (`src/mltl-eval/benchmarks/`, results in its README). Bottom-up is
   linear in trace length and formula size, and 2.6–9× faster than libmltl,
   R2U2 and top-down on heavy workloads. On random traces with wide windows,
   early-exit evaluators win on constants.
 - Shelved: T10.2, the bit-parallel batch over many traces (D28; design in
   `m10-batched-eval.md`).
-- Cheap next steps if resumed (see `ideas.md`): bitset trace view instead of
-  `HashSet` lookups, reused table buffers, skipping next-arrays for width-1
-  intervals.
+- **T10.4 (next): bit-row bottom-up** in `src/mltl-eval` (D31): bit-row
+  trace format built once per trace (with a proof it denotes the same spec
+  trace), bit-packed tables (64 positions per word), reused buffers, smaller
+  or no next arrays. Order: profile the heavy benchmark → prototype
+  unverified → benchmark → iterate → prove. Lessons in
+  `modules/mltl-eval.md`.

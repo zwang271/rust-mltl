@@ -1,6 +1,7 @@
 # Evaluating MLTL formulas on traces
 
-This note explains the two verified evaluators in `eval.rs`:
+This note explains the two verified evaluators of the `mltl-eval` crate
+(`src/top_down.rs`, `src/bottom_up.rs`):
 `mltl_eval` (top-down) and `mltl_eval_bottom_up` (bottom-up). Both answer
 the same question and are proved to agree with the formal semantics; they
 differ in how much work they do, and on which inputs.
@@ -246,7 +247,7 @@ Three things stand out:
 [R2U2](https://github.com/R2U2/r2u2) is a runtime monitor for MLTL built
 for embedded flight hardware. Like bottom-up evaluation, it never evaluates a
 subformula twice at the same time step, and our benchmarks
-(`../benchmarks/README.md`) show it is also linear in the trace length. So
+(`benchmarks/README.md`) show it is also linear in the trace length. So
 why have both? A common summary is "R2U2 uses bounded memory and bottom-up
 evaluation does not". That is half right, and the half that is wrong is
 instructive.
@@ -398,11 +399,11 @@ run over a stream instead of a stored trace.
 ## 7. What is proved
 
 Both evaluators are verified in Verus against `semantics_mltl`, the Rust
-transcription of the AFP definition (`mltl.rs`):
+transcription of the AFP definition (`mltl.rs` in the `mltl-core` crate):
 
 - `mltl_eval(f, t) == semantics_mltl(t, f)`, and it also equals
   `mltl_eval_spec`, the transcription of the Isabelle evaluator
-  (`properties.rs`).
+  (`properties.rs` in `mltl-core`).
 - `mltl_eval_bottom_up(f, t) == semantics_mltl(t, f)`.
 
 The proofs rest on a few facts: suffixes past the end of the trace are all

@@ -1,0 +1,19 @@
+[package]
+name = "mltl-eval"
+version.workspace = true
+edition.workspace = true
+description = "Verified executable MLTL evaluation (top-down and bottom-up)"
+
+[dependencies]
+vstd.workspace = true
+mltl-core = { path = "../mltl-core" }
+
+[package.metadata.verus]
+verify = true
+
+[lints]
+workspace = true
+
+[[example]]
+name = "bench_driver"
+path = "benchmarks/driver.rs"

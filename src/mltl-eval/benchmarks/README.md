@@ -1,17 +1,17 @@
 # Benchmarks
 
-Timing experiments for the two verified MLTL evaluators in `../src/eval.rs`
+Timing experiments for the two verified MLTL evaluators of `mltl-eval`
 (top-down `mltl_eval`, bottom-up `mltl_eval_bottom_up`) and, for reference,
 [libmltl](https://github.com/lmarzen/libmltl) (submodule `external/libmltl`)
 and the Rust monitor of [R2U2](https://github.com/R2U2/r2u2) (submodule
 `external/r2u2`). The algorithms and their complexity are explained in
-`../src/EVAL_MLTL.md`; these experiments measure them.
+`../EVAL_MLTL.md`; these experiments measure them.
 
 ## Running
 
 ```bash
 git submodule update --init external/libmltl external/r2u2   # once, from the repo root
-cd src/mltl-core/benchmarks
+cd src/mltl-eval/benchmarks
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python run.py          # full run (~13 minutes on an M-series Mac); --quick for a smoke test,
                                  # --only exp1,exp2 for a subset
@@ -111,5 +111,5 @@ Time per evaluation at the largest point:
   instruction count.
 - `run.py`, `plot.py`: run everything; plot results.
 
-Agent context: agent-docs/modules/mltl-core.md (Benchmarks),
+Agent context: agent-docs/modules/mltl-eval.md,
 agent-docs/project/plan.md (M10).

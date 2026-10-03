@@ -137,7 +137,7 @@ semantics diverge.
 - `tests/perf_compare/benchmark.cc`: 2048 random traces, 4 vars, lengths
   4…1024, formulas from `MLTL_interpreter/formulas.txt` with bounds
   rewritten to `[0, len/2]`. Reproduced (identical inputs) as the `libmltl`
-  workload of `src/mltl-core/benchmarks` (D24).
+  workload of `src/mltl-eval/benchmarks` (D24).
 
 ## R2U2 benchmark copy — `REPO/external/r2u2` (submodule, D24)
 - https://github.com/R2U2/r2u2 branch `develop`, pinned at `5573897`

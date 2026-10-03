@@ -133,7 +133,7 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
   `loop`/`while`, Verus reported "could not prove termination" — the
   height-ordering fact only fires on accessor terms. Fix: `proof {
   assert(f->F_1 == *g); }` before the call (minimal repro 2026-10-03:
-  20-line file, fails without, passes with). In `eval.rs`:
+  20-line file, fails without, passes with). In `mltl-eval`:
   `assert(f->Future_2 == *g)`, `assert(f->Until_0 == *g && f->Until_3 == *h)`.
 - **`f is Variant` is spec-only**: "cannot test variant in exec mode" — use
   `match f { Mltl::And(_, _) => true, _ => false }` in exec code.
@@ -143,7 +143,7 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
   the group). Trace view: `t.map_values(|s: HashSet<usize>| s@)`.
 - Plain `cargo test`/`cargo run --release` compile the verified code with
   ghost code erased; used for `tests/eval_agree.rs` and the benchmark driver
-  (`src/mltl-core/benchmarks/driver.rs`, declared as `[[example]]` with a
+  (`src/mltl-eval/benchmarks/driver.rs`, declared as `[[example]]` with a
   custom `path` in `src/mltl-core/Cargo.toml`). Plain builds emit
   unused-variable/import warnings for ghost-only bindings — expected.
 

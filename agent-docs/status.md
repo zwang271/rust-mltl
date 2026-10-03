@@ -2,9 +2,9 @@
 
 Current state only. History is in git.
 
-- **Verified:** `scripts/verify.sh` → mltl-core 169 verified, 0 errors
-  (Verus 0.2026.09.27.3cf1832, 2026-10-03). Runtime tests:
-  `cargo test -p mltl-core --release`.
+- **Verified:** `scripts/verify.sh` → mltl-core 130 + mltl-eval 39 = 169
+  verified, 0 errors (Verus 0.2026.09.27.3cf1832, 2026-10-03). Runtime tests:
+  `cargo test -p mltl-eval --release`.
 - **Toolchains:** Verus as above (needs rustup `1.98.1`); `1.85.1` for
   R2U2's pinned code; `stable` for everything else.
 - **Last housekeeping:** 2026-10-03 (first pass). Next: when milestone 3
@@ -12,7 +12,8 @@ Current state only. History is in git.
 
 | Component | State |
 |---|---|
-| mltl-core | All of `MLTL_Encoding`, `MLTL_Properties`, and the non-R2U2 parts of `MLTL_Properties_Extended` verified. Executable `convert_nnf`, `convert_bnf`, and two evaluators verified. Benchmarks in `src/mltl-core/benchmarks/`. |
+| mltl-core | All of `MLTL_Encoding`, `MLTL_Properties`, and the non-R2U2 parts of `MLTL_Properties_Extended` verified; executable `convert_nnf`, `convert_bnf`. |
+| mltl-eval | Top-down and bottom-up evaluators verified; benchmark suite. Next: bit-row bottom-up (prototype → benchmark → prove). |
 | parser (next) | Planned. |
 | formula progression | Planned. |
 | language partitioning | Planned. |

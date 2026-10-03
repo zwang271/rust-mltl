@@ -97,7 +97,7 @@ but nothing ported here uses it.
 | `semantic_shift_F/U/G/R` | `semantic_shift_f/u/g/r` | proof | `b-k` → `(b - k) as usize`. |
 | `semantic_unroll_F/U/G/R` | `semantic_unroll_f/u/g/r` | proof | |
 | `mltl_eval_interval_width` | same | spec | `b - a` → `nat_sub`. |
-| `function mltl_eval` / `mltl_eval_unchecked` | `mltl_eval_spec` / `mltl_eval_unchecked_spec` (D20); exec `eval.rs : mltl_eval` | spec (+ exec) | Mutual recursion; termination measure (`depth_mltl`, width, 1/0) — Isabelle uses `size` instead of `depth_mltl`. `Suc a` → `(a + 1) as usize` (only reached when `a < b`). Prop case: `pi.len() != 0 && pi[0].contains(q)` (Isabelle: `case π of [] ⇒ False | s#ss ⇒ q ∈ s`). |
+| `function mltl_eval` / `mltl_eval_unchecked` | `mltl_eval_spec` / `mltl_eval_unchecked_spec` (D20); exec `mltl-eval : mltl_eval` | spec (+ exec) | Mutual recursion; termination measure (`depth_mltl`, width, 1/0) — Isabelle uses `size` instead of `depth_mltl`. `Suc a` → `(a + 1) as usize` (only reached when `a < b`). Prop case: `pi.len() != 0 && pi[0].contains(q)` (Isabelle: `case π of [] ⇒ False | s#ss ⇒ q ∈ s`). |
 | `mltl_eval_{future,global,until,release}_base` / `_unrolling` | same | proof | |
 | `mltl_eval_unchecked_{future,global,until}_interval`, `mltl_eval_unchecked_release_dual` | same | proof | By recursion on `b - a` (Isabelle: `inc_induct`). |
 | `bounded_forall_unroll`, `bounded_until_unroll` | same | proof | Ported for completeness; the interval proofs don't call them. |
@@ -108,9 +108,9 @@ but nothing ported here uses it.
 | `atomics_agree` | same | spec | |
 | `atomics_agree_semantics` | same (+ helper `lemma_atomics_agree_drop`) | proof | Isabelle proof ~650 lines; here structural recursion on `f` with per-suffix IH. |
 
-## Executable evaluators — `eval.rs` (not in Isabelle beyond `mltl_eval`)
+## Executable evaluators — `mltl-eval` (not in Isabelle beyond `mltl_eval`)
 
-VERIFIED 2026-10-03 (crate 169 items). See `src/mltl-core/src/EVAL_MLTL.md`.
+VERIFIED 2026-10-03 (crate 169 items). See `src/mltl-eval/EVAL_MLTL.md`.
 
 | Rust item | Kind | Specification | Notes |
 |---|---|---|---|

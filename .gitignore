@@ -12,11 +12,11 @@
 .vscode/
 
 # Benchmarks (src/mltl-core/benchmarks): regenerable inputs and build outputs
-src/mltl-core/benchmarks/.venv/
-src/mltl-core/benchmarks/workloads/
-src/mltl-core/benchmarks/build/
+src/mltl-eval/benchmarks/.venv/
+src/mltl-eval/benchmarks/workloads/
+src/mltl-eval/benchmarks/build/
 __pycache__/
-src/mltl-core/benchmarks/r2u2_driver/target/
+src/mltl-eval/benchmarks/r2u2_driver/target/
 
 # Agent worktrees
 /.claude/worktrees/

@@ -1,4 +1,4 @@
-//! Benchmark driver for the two verified evaluators (`mltl_core::eval`).
+//! Benchmark driver for the two verified evaluators (crate `mltl-eval`).
 //!
 //! Usage: bench_driver <topdown|bottomup> <formulas.txt> <traces.txt> <min_seconds>
 //!
@@ -12,7 +12,7 @@
 //!
 //! NOT verified: the parser below is benchmark scaffolding (milestone 3 is
 //! the verified parser).
-use mltl_core::eval::{mltl_eval, mltl_eval_bottom_up};
+use mltl_eval::{mltl_eval, mltl_eval_bottom_up};
 use mltl_core::mltl::Mltl;
 use std::collections::HashSet;
 use std::time::Instant;

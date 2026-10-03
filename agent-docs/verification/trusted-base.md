@@ -10,15 +10,15 @@ Every trusted item in `rust-mltl/` code MUST appear here (AGENTS.md §4):
 (empty — no `assume`/`admit`/`external*` in rust-mltl code, checked 2026-10-03)
 
 Reliance on vstd's trusted std specifications (not our trust, but recorded
-for visibility, D19): `eval.rs` uses `Vec` and `std::collections::HashSet`
+for visibility, D19): `mltl-eval` uses `Vec` and `std::collections::HashSet`
 (`HashSet::contains` via `vstd::std_specs::hash` `assume_specification`,
 plus `group_hash_axioms`: `usize` obeys the key model, default hasher is
 valid). `#[verifier::spinoff_prover]` on two proofs in `properties.rs` is
 a solver-scheduling attribute, not trust.
 
-Unverified, non-library code: `src/mltl-core/benchmarks/` (driver with an
+Unverified, non-library code: `src/mltl-eval/benchmarks/` (driver with an
 ad-hoc libmltl-syntax parser, Python scripts, C++ libmltl driver) and
-`src/mltl-core/tests/eval_agree.rs` (runtime tests).
+`src/mltl-eval/tests/eval_agree.rs` (runtime tests).
 
 ## Upstream trust inherited by in-place targets
 Track separately once R2U2/WEST are brought in. Known for `r2u2_core` as of

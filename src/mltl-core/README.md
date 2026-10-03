@@ -12,9 +12,13 @@ It follows the AFP entry
 (normal forms, unrolling lemmas, an evaluator; R2U2-specific parts excluded).
 
 Status: `src/mltl.rs` (syntax, semantics) and `src/properties.rs` (all of
-the above properties) are verified; executable code is next. One deliberate
-difference from Isabelle: each trace step is a *finite* set of atoms, since
-MLTL is a finite logic. Verify with `scripts/verify.sh`.
+the above properties, plus executable `convert_nnf` and `convert_bnf`) are
+verified. One deliberate difference from Isabelle: each trace step is a
+*finite* set of atoms, since MLTL is a finite logic. Verify with
+`scripts/verify.sh`.
+
+Executable evaluators and their benchmarks live in the `mltl-eval` crate
+(`../mltl-eval`).
 
 Agent context: agent-docs/modules/mltl-core.md,
 agent-docs/correspondence/mission-time-ltl.md.
