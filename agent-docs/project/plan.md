@@ -6,7 +6,7 @@ Task IDs `T<milestone>.<n>`. Sizes: S ≈ a day, M days, L a week+, XL weeks.
 Order and reasons: D12.
 
 ```
-M1 toolchain ─> M2 mltl-core ─┬─> M4 progression (done) ─> M3 parser (done) ─> M5 lang-partition ─> M7 SAT
+M1 toolchain ─> M2 mltl-core ─┬─> M4 progression (done) ─> M3 parser, M5 lang-partition (done) ─> M7 SAT
                                ├─(fork URLs)─> M6 WEST in place
                                └─(fork URLs)─> M8 R2U2 in place
 M9 cross-cutting, alongside.   M10 fast evaluator: scalar part done, batching shelved.
@@ -37,21 +37,14 @@ Both theories ported and verified (`correspondence/formula-progression.md`,
 `modules/formula-progression.md`). Left over:
 - T4.6 done 2026-10-03 (`modules/formula-progression.md`, Performance).
 
-## M5 — Language partitioning (goal 5)
-Source: AFP `MLTL_Language_Partition_*` (Algorithm 241 lines, Proof 6671).
-Large: split into sub-milestones.
-- T5.1 (S) Decide where `mltl_ext` lives (own crate vs core); record decision.
-- T5.2 (M) `mltl_ext`, `to_mltl`, `semantics_mltl_ext`, `convert_nnf_ext`;
-  lemma that `semantics_mltl_ext` agrees with core semantics via `to_mltl`.
-- T5.3 (M) Compositions: `partial_sum`, `interval_times`, `is_composition*`,
-  list builders (`And_mltl_list`, …), `Mighty_Release_mltl_ext`,
-  `Global_mltl_decomp`, `LP_mltl_aux`, `LP_mltl` — spec + exec.
-- T5.4 (XL) `LP_mltl_language_union(_explicit)`. Read the Isabelle proof
-  structure first and write a proof outline into `modules/lang-partition.md`.
-- T5.5 (XL) `LP_mltl_language_disjoint(_k)`.
-- T5.6 (S) Replace `MLTL_Language_Partition_Codegen` string printing with the
-  M3 printer.
-- Exit: union + disjointness `VERIFIED`.
+## M5 — Language partitioning (goal 5) — done 2026-10-03, before the parser (D38)
+Whole AFP entry ported and verified (`correspondence/language-partitioning.md`,
+`modules/language-partitioning.md`); mltl_ext is the core parse tree (D39).
+Left over:
+- T5.6 (S) Port `MLTL_Language_Partition_Codegen` (string printing) on top
+  of the verified printer of `mltl-parse`.
+- Possible (owner's call): ownership passing in exec (D36) to cut copies;
+  a benchmark (no Haskell comparison, D40).
 
 ## M6 — WEST in place (goal 4)
 Upstream https://github.com/zwang271/WEST; blocked by Q10 (fork). Source: AFP `WEST_Algorithms.thy` (744),

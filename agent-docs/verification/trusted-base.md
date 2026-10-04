@@ -7,7 +7,7 @@ Every trusted item in `rust-mltl/` code MUST appear here (AGENTS.md §4):
 | ID | Location (file:item) | Kind | What is trusted | Why | Plan to discharge |
 |---|---|---|---|---|---|
 
-(empty — no `assume`/`admit`/`external*` in rust-mltl code, incl. `formula_progression`, checked 2026-10-03)
+(empty — no `assume`/`admit`/`external*` in rust-mltl code, incl. `formula_progression` and `language_partitioning`, checked 2026-10-03)
 
 Reliance on vstd's trusted std specifications (not our trust, but recorded
 for visibility, D19): `mltl-eval` uses `Vec` and `std::collections::HashSet`
@@ -22,7 +22,7 @@ exec_raw_tokens` (scheduling, not trust).
 
 Unverified, non-library code: `src/mltl-eval/benchmarks/` (driver with an
 ad-hoc libmltl-syntax parser, Python scripts, C++ libmltl driver) and
-`src/mltl-eval/tests/eval_agree.rs` and `src/formula_progression/tests/progression.rs` (runtime tests; the latter has an unverified `complen` helper), and `src/formula_progression/benchmarks/` (drivers with ad-hoc parsers; the mimalloc allocator is linked only into the benchmark driver, never into the library).
+`src/mltl-eval/tests/eval_agree.rs` and `src/formula_progression/tests/progression.rs` (runtime tests; the latter has an unverified `complen` helper), `src/language_partitioning/tests/partition.rs` (runtime tests with unverified `show`/`wpd` helpers), and `src/formula_progression/benchmarks/` (drivers with ad-hoc parsers; the mimalloc allocator is linked only into the benchmark driver, never into the library).
 
 ## Upstream trust inherited by in-place targets
 Track separately once R2U2/WEST are brought in. Known for `r2u2_core` as of

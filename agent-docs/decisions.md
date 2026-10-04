@@ -4,7 +4,7 @@ What is currently decided, grouped by topic, with the reason. This is a
 register, not a log: when a decision changes, edit the entry; delete entries
 that no longer matter (git keeps the history). Each entry is a few lines:
 the decision, why, and what it means for future work. IDs are stable anchors
-for cross-references; give new entries the next free number (next: D38).
+for cross-references; give new entries the next free number (next: D41).
 
 ## Repository, docs and process
 
@@ -89,9 +89,14 @@ for cross-references; give new entries the next free number (next: D38).
   easy; formula progression is the smallest algorithm.
 - **D17 — Extra properties belong in mltl-core.** The non-R2U2 parts of
   `REU/isabelle/MLTL_Properties_Extended.thy` are ported into
-  `properties.rs`. R2U2-specific parts (the r2u2-form section and the
-  parse tree with auxiliary data, which exists to carry monitor state) wait
-  for the R2U2 milestone.
+  `properties.rs`. The r2u2-form section waits for the R2U2 milestone. The
+  parse tree with auxiliary data is ported (`mltl-core/src/parse_tree.rs`,
+  D39), since language partitioning needs it.
+- **D38 — Language partitioning before the parser** (owner, 2026-10-03).
+  Like D33, supersedes D12's order for this step; the parser is being done
+  in parallel by another session. Scope: the whole AFP entry (algorithm,
+  union and both disjointness theorems); `Codegen.thy` waits for the
+  verified printer (T5.6).
 - **D33 — Formula progression before the parser** (owner, 2026-10-03).
   Supersedes the parser-first order in D12 for this one step. Scope: the
   AFP theory and the unpublished `Formula_Progression_Extended.thy`
@@ -110,6 +115,21 @@ for cross-references; give new entries the next free number (next: D38).
   `mltl-eval` only for the executable `Trace` / `trace_view` (and uses
   `mltl_eval` in tests). If more crates need traces, move `trace.rs` into
   `mltl-core` instead of depending on the evaluators.
+- **D39 — `mltl_ext` is the parse tree** (owner's idea, 2026-10-03).
+  Isabelle's `'a mltl_ext` (compositions on F/G/U/R) is
+  `MltlParseTree<A, Seq<usize>>` (spec) / `MltlParseTree<usize, Vec<usize>>`
+  (exec, viewed by `ext_view`), not a separate datatype. Reason: one
+  formula-with-data type for language partitioning and, later, R2U2 monitor
+  state. Consequences: data off temporal nodes is ignored (theorems hold for
+  any), new nodes get `[]`; `convert_nnf_ext` must say whose data a rewritten
+  node keeps (the replaced node's). Spec data is `Seq` so proofs never
+  compare `Vec`s. Crate `src/language_partitioning` (package
+  `language_partitioning`, the existing directory, as D34); `size_mltl`
+  moved from formula_progression into `mltl-core/src/mltl.rs`, since the
+  parse-tree size lemma needs it.
+- **D40 — No differential test against Isabelle for language partitioning**
+  (owner, 2026-10-03). Exec is proved equal to the spec, and the Isabelle
+  `value` examples are runtime tests; no Haskell export, no benchmark.
 - **D35 — Shared exec helpers live in mltl-core.** `take` (total, Isabelle
   `take`), `clone_mltl` (verified deep copy) and `eq_mltl` (verified
   structural equality) are in `mltl-core/src/mltl.rs`, since any algorithm

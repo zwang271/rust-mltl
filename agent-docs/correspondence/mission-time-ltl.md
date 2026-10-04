@@ -75,11 +75,19 @@ Source: `REU/isabelle/MLTL_Properties_Extended.thy` at commit `14fdbbe`
 2026-10-02 (crate 127 items, ~3 s). Isabelle imports formula progression,
 but nothing ported here uses it.
 
+**Parse trees** (section "MLTL Parse Tree Datatype with Auxiliary Storage";
+`parse_tree.rs`, VERIFIED 2026-10-03, D39):
+
+| Isabelle | Rust | Kind | Notes |
+|---|---|---|---|
+| `datatype ('a, 'b) mltl_parse_tree` | `MltlParseTree<A, B>` | type | Constructors `Prop_e … Release_e` → `Prop … Release`, Isabelle's order, data first. Bounds `usize`. |
+| `mltl_parse_tree_to_mltl` | `mltl_parse_tree_to_mltl_spec`; exec `mltl_parse_tree_to_mltl<B>` | spec + exec | Exec generic in the data type. |
+| `get_aux_data`, `get_child_trees`, `update_aux_data`, `map_aux_data` | same | spec | `get_child_trees` → `Seq`; `map_aux_data` takes `spec_fn(B) -> C`. |
+| `size` (datatype) | `size_parse_tree` | spec | As `size_mltl` (now in `mltl.rs`, moved from formula_progression). |
+| `mltl_parse_tree_preserves_size`, `mltl_parse_tree_{true,…,release}_inv` | same | proof | `obtains` → `ensures t is Not && phi == …(*t->Not_1)` etc. |
+| — | `mltl_parse_tree_to_mltl_map_aux_data` | proof | Not in Isabelle: data maps keep the formula. |
+
 **Omitted as R2U2-specific (D17)** — belong with the R2U2 formalization (M8):
-- `datatype mltl_parse_tree` (doc: "for attaching execution state (SCQ,
-  observer) during monitoring"), `mltl_parse_tree_to_mltl`, `get_aux_data`,
-  `get_child_trees`, `update_aux_data`, `map_aux_data`,
-  `mltl_parse_tree_preserves_size`, `mltl_parse_tree_{true,false,prop,not,and,or,global,future,until,release}_inv`.
 - `is_r2u2_form`, `convert_r2u2_form`, `convert_r2u2_form_is_r2u2_form`,
   `convert_r2u2_form_equiv`, `convert_r2u2_form_welldef_intervals`.
 

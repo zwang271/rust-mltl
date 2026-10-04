@@ -18,7 +18,7 @@ rust-mltl/
     mltl-parse/         # verified parser/printer (goal 6)
     west/               # WEST (goal 4) — or a wrapper around the in-place WEST repo
     progression/        # formula progression (goal 5)
-    lang-partition/     # language partitioning (goal 5); mltl_ext lives here or in core
+    language_partitioning/  # done (D38, D39): mltl_ext = mltl-core parse tree
     sat/                # MLTL SAT solver
     r2u2/               # R2U2 in-place verification (goal 3); fork submodules live in vendor/ (D9)
 ```

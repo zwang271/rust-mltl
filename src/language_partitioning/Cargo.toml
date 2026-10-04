@@ -1,0 +1,18 @@
+[package]
+name = "language_partitioning"
+version.workspace = true
+edition.workspace = true
+description = "Verified MLTL language partitioning, ported from AFP Mission_Time_LTL_Language_Partition"
+
+[dependencies]
+vstd.workspace = true
+mltl-core = { path = "../mltl-core" }
+
+[package.metadata.verus]
+verify = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+mltl-eval = { path = "../mltl-eval" }

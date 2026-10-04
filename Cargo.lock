@@ -57,6 +57,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "language_partitioning"
+version = "0.1.0"
+dependencies = [
+ "mltl-core",
+ "mltl-eval",
+ "vstd",
+]
+
+[[package]]
 name = "libmimalloc-sys"
 version = "0.1.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"

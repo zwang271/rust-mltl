@@ -190,6 +190,36 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
 - **`return` inside a `while`** is fine; the function's `ensures` is checked
   at the return (`formula_progression_alt`).
 
+- **No implicit `nat` → `int` coercion in calls** (`hi + n` is `int`):
+  cast `(hi + n) as nat` at the argument (language partitioning).
+- **Identical closures are equal terms**: a spec fn's `Seq::new(m, |j| f(j))`
+  and the same lambda written in a lemma or loop invariant compare equal
+  without `=~=` (`LP_mltl_aux_spec(..) == lp_future_list(..)`).
+- **Mutual recursion lemma + helper at the same `k`**: main `decreases k,
+  0nat`, helper `decreases k, 1nat` (helper calls main at `k`, main calls
+  helper at `k-1`). Reversed, Verus reports "could not prove termination".
+- **Exec values built inline lose their views**: in `Global(single_vec(x),
+  .., Box::new(Not(Vec::new(), ..)))` the view of the nested nodes failed;
+  bind each part (`let nv = Vec::new(); let body = Not(nv, ..)`), assert
+  `nv@ =~= Seq::empty()`, and give the view fn fuel 3.
+- **A conjunctive `assert forall` gets one trigger**: `assert forall|j| ..
+  implies #[trigger] sat(xs[j]) == .. && disjoint(xs[j])` did not satisfy a
+  later `requires forall|j| disjoint(#[trigger] xs[j])`; use
+  `#![trigger xs[j]]`.
+- **rlimit on assembly lemmas**: when a lemma combines several lifted facts
+  with existentials, move each piece into a small lemma and pass a `spec_fn`
+  (`head_concat_sat`, `single_head_disjoint`); `spinoff_prover` alone did
+  not help.
+
+## Spikes
+- `spikes/m1-semantics-spike.rs` (T1.4, 2026-10-02, VERIFIED: 14 verified,
+  0 errors; not part of the build). Contains: generic `Formula<A>` enum with
+  `Box` children and `usize` bounds; full `semantics` spec over
+  `Seq<ISet<A>>` (all 10 cases); total `drop`; the three `MLTL_Encoding.thy`
+  example lemmas; `Vec<Vec<bool>>` trace with view to `Seq<ISet<nat>>`;
+  `view_f: Formula<usize> -> Formula<nat>`; exec `eval` proved equal to
+  `semantics` for True/False/Prop/Not/And/Or/Future (loop over `[a, min(b, rem)]`).
+  Starting point for T2.2–T2.7.
 - (2026-10-03, parser) Postconditions on `&mut` args must say `final(x)` (or
   `old(x)`); `decreases_to!` is unavailable here; spec-only items imported by
   name break plain `cargo build` (use glob imports). Parser-specific proof

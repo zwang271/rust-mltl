@@ -14,13 +14,17 @@ Shared MLTL foundation: syntax, semantics, properties. Isabelle mapping:
   `convert_bnf`. `spinoff_prover` on `release_until_dual2` and
   `convert_nnf_preserves_semantics`.
 - `src/mltl.rs` also has exec `clone_mltl`, `eq_mltl` and spec `take` (D35).
+- `src/mltl.rs` also has `size_mltl` (Isabelle's datatype `size`; D39).
+- `src/parse_tree.rs`: `MltlParseTree<A, B>` (formula with data at every
+  node) and its section of `MLTL_Properties_Extended.thy` (D39). Used by
+  language partitioning (data = compositions); meant for R2U2 state too.
 - Exec `convert_nnf` / `convert_bnf` state their guarantees in `ensures`
   (normal form, same meaning, …; D37) and delegate the recursion to private
   `convert_nnf_unchecked` / `convert_bnf_unchecked`. `is_nnf` +
   `convert_nnf_is_nnf` added for this (not in Isabelle).
 - `complen_property_via_atomics`: AFP's progression corollary, proved from
   `atomics_agree_semantics` (no progression).
-- Crate: 137 VERIFIED (2026-10-03).
+- Crate: 154 VERIFIED (2026-10-03).
 
 ## Design
 - One `Mltl<A>` for spec and exec, `usize` bounds (D15); spec traces
