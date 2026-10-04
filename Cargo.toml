@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["src/mltl-core", "src/mltl-eval"]
+members = ["src/mltl-core", "src/mltl-eval", "src/formula_progression"]
 
 [workspace.package]
 edition = "2021"
@@ -12,4 +12,4 @@ vstd = "=0.0.0-2026-09-20-0158"
 
 [workspace.lints.rust]
 # Verus sets cfg(verus_only) during verification; only use it on imports/attributes.
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(verus_only)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(verus_only)', 'cfg(fp_bench_mimalloc)'] }

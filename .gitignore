@@ -1,6 +1,8 @@
-# Local-only docs: the CLAUDE.md shim and the owner-annotated PLAN.md
+# Local-only docs: the CLAUDE.md shim, the owner-annotated PLAN.md, and
+# this machine's paths for agents
 /CLAUDE.md
 /PLAN.md
+/agent-docs/local-paths.md
 
 # Rust / Cargo
 /target/
@@ -17,6 +19,9 @@ src/mltl-eval/benchmarks/workloads/
 src/mltl-eval/benchmarks/build/
 __pycache__/
 src/mltl-eval/benchmarks/r2u2_driver/target/
+src/formula_progression/benchmarks/.venv/
+src/formula_progression/benchmarks/workloads/
+src/formula_progression/benchmarks/build/
 
 # Agent worktrees
 /.claude/worktrees/

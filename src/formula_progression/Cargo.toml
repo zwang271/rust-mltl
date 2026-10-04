@@ -1,0 +1,23 @@
+[package]
+name = "formula_progression"
+version.workspace = true
+edition.workspace = true
+description = "Verified MLTL formula progression, ported from AFP Mission_Time_LTL_Formula_Progression"
+
+[dependencies]
+vstd.workspace = true
+mltl-core = { path = "../mltl-core" }
+mltl-eval = { path = "../mltl-eval" }
+
+[package.metadata.verus]
+verify = true
+
+[lints]
+workspace = true
+
+[[example]]
+name = "fp_bench"
+path = "benchmarks/driver.rs"
+
+[dev-dependencies]
+mimalloc = { version = "0.1", default-features = false }
