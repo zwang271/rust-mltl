@@ -35,6 +35,7 @@ then what your task needs. Ground rules are in `../AGENTS.md` §3–5.
 | Per-module notes | `modules/` (`mltl-core.md`, `mltl-eval.md`, `formula-progression.md`, `mltl-parse.md`, `language-partitioning.md`) |
 | Human docs that need an owner-approved fix | `human-doc-backlog.md` |
 | Throwaway spikes (not built) | `verification/spikes/` |
+| Owner's portable prompt describing this doc system, for other repos. **Not project knowledge; don't read it for project work** | `meta/doc-system-prompt.md` |
 
 Status words: `VERIFIED` (Verus accepted it; give version and date),
 `PARTIAL`, `ASSUMED` (trusted, listed in the ledger), `PLANNED`, `UNKNOWN`.
