@@ -66,8 +66,16 @@ Upstream https://github.com/zwang271/WEST; blocked by Q10 (fork). Source: AFP `W
 - Exit: real WEST code `VERIFIED` correct w.r.t. `semantics_mltl`.
 
 ## M7 — MLTL SAT solver
-Source: `REU/isabelle/` (D18). Survey, approach (D45) and crates (D46) in
-`m7-sat.md`.
+Source: `REU/isabelle/` (D18). Approach D45, crates D46; details `m7-sat.md`,
+`../correspondence/mltl-sat.md`. Done 2026-10-04: propositional layer + LRAT
+checker, fast translation + soundness theorem, verified encoder and checked
+`decide`, completeness (a CNF model decodes to a satisfying trace; CNF ⟺
+MLTL equisatisfiable), verified `solve`, CaDiCaL glue, benchmark on the REU
+formulas. Open:
+- T7.11 (L, owner's call) slow translation, `fs_eq_slow`, encoding-length
+  theorems; Isabelle's naive/Tseytin CNF.
+- T7.12 (S) in-process CaDiCaL (crate) instead of a subprocess; deferred
+  until WASM matters (owner, 2026-10-04).
 
 ## M8 — R2U2 in place (goal 3)
 Blocked by Q10 (fork). Target theorem: D11. Sources: `ROOT/r2u2/monitors/rust/r2u2_core`,

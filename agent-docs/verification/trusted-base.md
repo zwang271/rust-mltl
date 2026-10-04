@@ -6,8 +6,10 @@ Every trusted item in `rust-mltl/` code MUST appear here (AGENTS.md §4):
 
 | ID | Location (file:item) | Kind | What is trusted | Why | Plan to discharge |
 |---|---|---|---|---|---|
+| TB1 | `src/mltl-sat/src/solve.rs : run_solver` | `#[verifier::external_body]`, no `requires`/`ensures` | Only that it is memory safe and returns (it runs the `cadical` subprocess via `cadical.rs`). Nothing about its result: callers get an arbitrary `SolverOutput`. | Verus cannot verify process spawning or file I/O; with an empty contract no fact about the output enters the proofs. | Permanent while CaDiCaL runs as a subprocess. |
+| TB2 | `src/mltl-sat/src/solve.rs : now_ns` | `#[verifier::external_body]`, no `requires`/`ensures` | Only that reading the clock is memory safe and returns. Its value only fills `Timings` (benchmark data), never a proof. | `std::time::Instant` has no vstd spec. | Permanent. |
 
-(empty — no `assume`/`admit`/`external*` in rust-mltl code, incl. `formula_progression` and `language_partitioning`, checked 2026-10-03)
+Otherwise no `assume`/`admit`/`external*` in rust-mltl code (checked 2026-10-04).
 
 Reliance on vstd's trusted std specifications (not our trust, but recorded
 for visibility, D19): `mltl-eval` uses `Vec` and `std::collections::HashSet`
@@ -33,6 +35,14 @@ or check a different CNF than intended (the latter matters only if a caller
 relies on it; the MLTL solver passes its in-memory CNF, never parsed text).
 `examples/lrat_check.rs` (CLI) and `tests/lrat.rs` are unverified drivers.
 vstd specs used: `Vec` (`set`, `push`, `clear`, indexing).
+
+`mltl-sat`: the trusted items are TB1 and TB2 above. `solve` is verified (its
+`ensures` is the end-to-end guarantee). `src/mltl-sat/src/cadical.rs`
+(outside `verus!`: writes DIMACS, runs `cadical`, parses its model/LRAT) is
+reached only through TB1 and TB2 (`clock_ns`). `Encoding`
+fields are `pub(crate)`, so outside the crate only `encode` builds one.
+`examples/mltl_sat.rs`, `tests/solve.rs`: unverified drivers. vstd specs
+used: `HashSet::new/insert` (decode), `Vec::as_slice`.
 
 Unverified, non-library code: `src/mltl-eval/benchmarks/` (driver with an
 ad-hoc libmltl-syntax parser, Python scripts, C++ libmltl driver) and

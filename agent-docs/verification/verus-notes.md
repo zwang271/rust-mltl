@@ -211,6 +211,18 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
   (`head_concat_sat`, `single_head_disjoint`); `spinoff_prover` alone did
   not help.
 
+- **Re-running Verus needs a content change** (seen 2026-10-04): `cargo
+  verus verify -p X` after only `touch` reuses the cached result and prints
+  just "Finished". Append and remove a comment line in `lib.rs` to force a
+  real run.
+- **Private fields + public specs**: a `pub` fn's `requires`/`ensures` may not
+  name private fields ("field expression for an opaque datatype"). Use
+  `pub closed spec fn` accessors, or `pub open(crate) spec fn` when other
+  modules of the crate must see the body (`mltl-sat` `Encoding::inv`).
+- **`-x` on an `i32` in spec code is `int`**: `seq![-x, y]` is `Seq<int>`;
+  bind `let nx: i32 = -x;` in exec and use `nx` (`mltl-sat/src/encode.rs`).
+- `slice::reverse` has no vstd spec; iterate by index instead.
+
 ## Spikes
 - `spikes/m1-semantics-spike.rs` (T1.4, 2026-10-02, VERIFIED: 14 verified,
   0 errors; not part of the build). Contains: generic `Formula<A>` enum with

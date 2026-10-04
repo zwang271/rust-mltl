@@ -1,0 +1,20 @@
+[package]
+name = "mltl-sat"
+version.workspace = true
+edition.workspace = true
+description = "Verified MLTL to SAT translation (REU Isabelle Mission_Time_LTL_to_SAT, fast translation)"
+
+[dependencies]
+vstd.workspace = true
+mltl-core = { path = "../mltl-core" }
+propositional = { path = "../propositional" }
+mltl-eval = { path = "../mltl-eval" }
+
+[package.metadata.verus]
+verify = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+mltl-parse = { path = "../mltl-parse" }

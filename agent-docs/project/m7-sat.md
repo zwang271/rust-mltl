@@ -90,7 +90,6 @@ Approach: untrusted fast solver (CaDiCaL) + verified checking of its answer.
   numbers M. Optional: slow translation, `fs_eq_slow`, encoding-length
   theorems, Isabelle-faithful naive/Tseytin CNF.
 
-
 ## Progress
 - 2026-10-04 `src/propositional` VERIFIED (44 items, 0 errors): `formula.rs`
   (PPS `Formulas`/`Sema`: `Formula`, `formula_semantics`, `big_and/or`,
@@ -106,3 +105,18 @@ Approach: untrusted fast solver (CaDiCaL) + verified checking of its answer.
   250 vars/1065 clauses: solve 1.27 s, solve + LRAT 1.41 s, our parse
   0.09 s + check 0.07 s (119k steps). PHP(9,8): 79k steps, 0.03 s check.
   All CaDiCaL proofs tried were RUP-only and accepted.
+- 2026-10-04 `src/mltl-sat` VERIFIED (75 items): `fast.rs` (translation,
+  `trace_agrees_assign`, `assign_agrees_trace`, root theorem), `table.rs`
+  (hash-consing), `encode.rs` (CNF; invariants `enc_ok` = soundness,
+  `enc_complete` = completeness), `solve.rs` (`decide`, `equisatisfiable`,
+  verified `solve` with end-to-end `ensures`; trusted `run_solver`,
+  `now_ns`). Details: `../correspondence/mltl-sat.md`.
+- Benchmark: REU `experiments/formulas.txt` (100 formulas): 38 SAT / 62
+  UNSAT, identical to the REU Z3 run (`results/six_experiments_30s/z3_fast.csv`);
+  totals encode 0.13 s, CaDiCaL (with LRAT) 4.9 s, our checks 0.31 s;
+  slowest formula 0.13 s; whole run 5.5 s wall. REU numbers: verified
+  Isabelle SML solver median 74 s/formula (90/100 in 10 min); Isabelle
+  encoding + Z3 median 0.28 s/formula.
+- Verification time: propositional ~1.5 s, mltl-sat ~5 s.
+- CaDiCaL stays a subprocess (owner, 2026-10-04) until WASM is on the table;
+  in-process would add CaDiCaL's memory safety to the trusted base.

@@ -107,6 +107,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "mltl-sat"
+version = "0.1.0"
+dependencies = [
+ "mltl-core",
+ "mltl-eval",
+ "mltl-parse",
+ "propositional",
+ "vstd",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
