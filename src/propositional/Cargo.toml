@@ -1,0 +1,14 @@
+[package]
+name = "propositional"
+version.workspace = true
+edition.workspace = true
+description = "Verified propositional logic, CNF and an LRAT proof checker (AFP Propositional_Proof_Systems)"
+
+[dependencies]
+vstd.workspace = true
+
+[package.metadata.verus]
+verify = true
+
+[lints]
+workspace = true

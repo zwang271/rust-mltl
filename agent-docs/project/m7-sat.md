@@ -90,3 +90,19 @@ Approach: untrusted fast solver (CaDiCaL) + verified checking of its answer.
   numbers M. Optional: slow translation, `fs_eq_slow`, encoding-length
   theorems, Isabelle-faithful naive/Tseytin CNF.
 
+
+## Progress
+- 2026-10-04 `src/propositional` VERIFIED (44 items, 0 errors): `formula.rs`
+  (PPS `Formulas`/`Sema`: `Formula`, `formula_semantics`, `big_and/or`,
+  `biimp`, `sat`, `entailment`), `cnf.rs` (`Literal`, list-based
+  `clause_semantics`/`cnf_semantics`, `form_of_cnf` + semantics lemma),
+  `dimacs.rs` (i32 CNF, `check_model`, view to `Literal<nat>`), `lrat.rs`
+  (checker). Checker design: db = `Vec<Option<Vec<i32>>>` by clause id
+  (input clauses 1..n), partial assignment `Vec<i8>` + trail; invariant
+  "every db clause is entailed by the input"; per step the ghost invariant
+  `rup_inv` = "every model of F falsifying C extends the assignment".
+  Tautologies are accepted without hints; negative (RAT) hints fail.
+- Measured (CaDiCaL 3.0.1 from Homebrew, M-series laptop): random 3-SAT
+  250 vars/1065 clauses: solve 1.27 s, solve + LRAT 1.41 s, our parse
+  0.09 s + check 0.07 s (119k steps). PHP(9,8): 79k steps, 0.03 s check.
+  All CaDiCaL proofs tried were RUP-only and accepted.

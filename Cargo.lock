@@ -116,6 +116,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "propositional"
+version = "0.1.0"
+dependencies = [
+ "vstd",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
