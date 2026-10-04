@@ -20,7 +20,7 @@ Current state only. History is in git.
 | formula progression | Done (D33–D36): AFP theory and the Extended theory's simplified `prog` fully verified, exec + runtime tests; benchmarked vs the Haskell export (about equal; faster with mimalloc; 66×+ vs the deployed API binary). |
 | parser | Done: lexer, grammar, parser (sound + complete), printer (round trip), numbering (injective, truth-preserving), AFP binding examples, cargo-style error reports from the verified parser's stopping point (positions proved in bounds, wording tested); 142 verified. |
 | language partitioning | Done (D38–D40): whole AFP entry verified (union, disjointness for all-ones compositions and for `k = 1`), exec `LP_mltl` with the theorems in its `ensures`, Isabelle examples as runtime tests; mltl_ext = core parse tree (now ported). Printing (`Codegen.thy`) waits for the verified printer. |
-| SAT solver | Planned; source located (D18), not surveyed. |
+| SAT solver | Plan approved 2026-10-04 (D45, D46; `project/m7-sat.md`). |
 | WEST, R2U2 in place | Waiting for fork URLs (Q10, deferred). |
 | batched evaluator | Designed, shelved (D28). |
 

@@ -4,7 +4,7 @@ What is currently decided, grouped by topic, with the reason. This is a
 register, not a log: when a decision changes, edit the entry; delete entries
 that no longer matter (git keeps the history). Each entry is a few lines:
 the decision, why, and what it means for future work. IDs are stable anchors
-for cross-references; give new entries the next free number (next: D43).
+for cross-references; give new entries the next free number (next: D50).
 
 ## Repository, docs and process
 
@@ -105,7 +105,26 @@ for cross-references; give new entries the next free number (next: D43).
   formula without bound, so only `prog` is useful in practice.
 - **D18 — SAT solver source.** The MLTL SAT solver formalization is in
   `REU/isabelle/` (`MLTL_SAT_Solver.thy`, `Fast_MLTL_To_SAT*.thy`, CNF and
-  SAT-solver theories). Unpublished, read-only, not yet surveyed.
+  SAT-solver theories). Unpublished, read-only; surveyed 2026-10-03
+  (`project/m7-sat.md`). Owner: it goes to the AFP soon; re-sync then.
+- **D45 — SAT solving = untrusted solver + verified checks** (owner approved
+  the plan, 2026-10-04). No verified fast SAT solver exists, so CaDiCaL
+  (unverified) solves; a SAT answer is trusted only after the decoded trace
+  passes the verified evaluator, an UNSAT answer only after a Verus LRAT
+  checker accepts CaDiCaL's proof against our own in-memory CNF. Results are
+  sat / unsat / unknown; a genuine model is always accepted (proved), but
+  the solver itself may fail. The solver call is one `external_body` fn
+  with an empty contract (`run_solver`, ledger TB1); output parsing is
+  unverified and needs no trust. LRAT only, no DRAT checker. CaDiCaL runs
+  as a subprocess (owner, 2026-10-04) until WASM matters.
+- **D46 — SAT crates** (2026-10-04). `src/propositional` (package
+  `propositional`): AFP `Propositional_Proof_Systems` formulas, semantics,
+  CNF, plus the DIMACS-integer CNF, model check and LRAT checker; no MLTL
+  dependency. The MLTL translation is crate `src/mltl-sat` on top
+  (subprocess CaDiCaL glue in `cadical.rs`). Scope first: fast translation + its direct soundness proof; slow translation,
+  fast = slow, encoding-length theorems later. The LRAT checker has no
+  Isabelle source, so it has no `_spec` twin (D20): its `ensures` states
+  soundness directly.
 
 ## Semantics and representation
 

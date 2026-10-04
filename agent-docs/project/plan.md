@@ -66,8 +66,8 @@ Upstream https://github.com/zwang271/WEST; blocked by Q10 (fork). Source: AFP `W
 - Exit: real WEST code `VERIFIED` correct w.r.t. `semantics_mltl`.
 
 ## M7 — MLTL SAT solver
-Source: `REU/isabelle/` (D18). T7.1 survey + correspondence page; then the same
-spec → exec → main-theorem pattern as M4. Sized after survey.
+Source: `REU/isabelle/` (D18). Survey, approach (D45) and crates (D46) in
+`m7-sat.md`.
 
 ## M8 — R2U2 in place (goal 3)
 Blocked by Q10 (fork). Target theorem: D11. Sources: `ROOT/r2u2/monitors/rust/r2u2_core`,

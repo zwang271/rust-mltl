@@ -124,7 +124,7 @@ semantics diverge.
 - **MLTL SAT solver** (owner-confirmed, D18): `MLTL_SAT_Solver.thy`,
   `MLTL_To_SAT.thy`, `Fast_MLTL_To_SAT*.thy`, `MLTL_CNF_Encoder.thy`,
   `Tseytin_CNF_Lists.thy`, `Prop_To_SAT_Solver.thy`,
-  `SAT_Solver_Locale_Executable.thy`, … Not yet surveyed (T7.1).
+  `SAT_Solver_Locale_Executable.thy`, … Surveyed 2026-10-03: `project/m7-sat.md`.
 
 ## libmltl (owner's current evaluator; performance baseline for M10)
 - https://github.com/lmarzen/libmltl, surveyed at commit `19d8cfc`
