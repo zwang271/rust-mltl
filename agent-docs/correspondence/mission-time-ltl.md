@@ -18,7 +18,8 @@ VERIFIED rows: `scripts/verify.sh`, Verus 0.2026.09.27.3cf1832, 2026-10-02.
 | example lemma 1 (`Not (F[0,2] Prop 0)`) | `mltl.rs : example_not_future` | proof | VERIFIED | Isabelle states `... = False`; Rust states `!semantics_mltl(...)`. |
 | example lemma 2 (`F[0,2] (Not Prop 0)`) | `mltl.rs : example_future_not` | proof | VERIFIED | |
 | example lemma 3 (`G[0,2] Prop 0`) | `mltl.rs : example_global` | proof | VERIFIED | |
-| (List library) `drop`, `length (drop i xs)`, `drop_drop` | `mltl.rs : drop, lemma_drop_len, lemma_drop_drop, lemma_drop_past_end, lemma_drop_zero` | spec/proof | VERIFIED | Isabelle gets these from `List`; Verus `Seq::skip` is partial, hence our wrappers. `nat_sub` mirrors `nat` minus. |
+| (List library) `drop`, `take`, `length (drop i xs)`, `drop_drop` | `mltl.rs : drop, take, lemma_drop_len, lemma_drop_drop, lemma_drop_past_end, lemma_drop_zero` | spec/proof | VERIFIED | Isabelle gets these from `List`; Verus `Seq::skip`/`take` are partial, hence our wrappers. `nat_sub` mirrors `nat` minus. |
+| (datatype) `=` on `'a mltl`, copying | `mltl.rs : eq_mltl, clone_mltl` | exec | VERIFIED 2026-10-03 | `usize` atoms; `ensures r == (*f == *g)` / `r == *f` (D35). |
 | — | `mltl.rs : sanity_until, sanity_release_zero_bound` | proof | VERIFIED | Not in Isabelle. Exercise Until and Release incl. the `b = 0` truncation case. Negative test (flipping a claim) fails as expected, 2026-10-02. |
 
 ## MLTL_Properties.thy
@@ -50,10 +51,11 @@ local `ROOT/isabelle` R2U2 theories — guides what later milestones rely on.
 | `release_until_dual2` | same (+ helper `not_until_not_unfold`) | proof | | Uses new helper `lemma_first_failure` (first index where a predicate fails) instead of Isabelle's linorder/smt steps. |
 | `release_until_dual`, `until_release_dual` | same | proof | 0/0/0/4, 0/0/0/1 | |
 | `release_and_distribute` | same | proof | | Via the duals + `until_or_distribute`, as Isabelle. |
-| `convert_nnf` | `convert_nnf_spec` (spec, D20); exec `convert_nnf` (+ helper `convert_nnf_not`) with `ensures r == convert_nnf_spec(*f)` | spec + exec | | Termination of spec: `decreases depth_mltl(f) via convert_nnf_spec_decreases`. Exec on `Mltl<usize>` (D19); `convert_nnf_not` computes `convert_nnf (Not g)` without cloning. |
+| `convert_nnf` | `convert_nnf_spec` (spec, D20); exec `convert_nnf` (+ helper `convert_nnf_not`) with `ensures r == convert_nnf_spec(*f)` | spec + exec | | Termination of spec: `decreases depth_mltl(f) via convert_nnf_spec_decreases`. Exec on `Mltl<usize>` (D19); `convert_nnf_not` computes `convert_nnf (Not g)` without cloning. Exec `ensures` also states `is_nnf(r)` and, for well-defined `f`, `semantic_equiv(r, f)`; recursion in private `convert_nnf_unchecked`. |
 | `convert_nnf_preserves_semantics` | same | proof | 1/0/6/0 | `requires intervals_welldef(f)`; per-trace. |
 | `convert_nnf_form_Not_Implies_Prop` | `convert_nnf_form_not_implies_prop` | proof | 0/0/7/0 | snake_case name. |
 | `convert_nnf_convert_nnf` | same | proof | 26/0/0/0 | |
+| — | `is_nnf`, `convert_nnf_is_nnf` | spec, proof | | Not in Isabelle (which states the NNF shape piecewise): `Not` only over atoms. Used in exec `convert_nnf`'s `ensures` (D37). |
 | `nnf_subformulas` | same | proof | 4/0/0/0 | Returns the witness `init_G` (stronger than Isabelle's `∃`). |
 | `complen_mltl` | `complen_mltl` | spec | 118/272/0/3 | `(complen φ) - 1` → `nat_sub`. |
 | `complen_geq_one` | same | proof | 15/6/0/1 | |
@@ -89,7 +91,7 @@ but nothing ported here uses it.
 | `not_CE`, `and_CE_left/right`, `or_CE_left/right`, `globally_CE`, `future_CE`, `until_CE_left/right`, `release_CE_left/right` | `not_ce`, `and_ce_left`, … (snake_case) | proof | Helper `lemma_equiv_suffixes` (not in Isabelle) instantiates `≡_m` on suffixes. |
 | `inductive is_bnf` + `inductive_simps` | `is_bnf` | spec | Inductive predicate → recursive spec fn following the `inductive_simps` equations (Verus has no inductive predicates). |
 | `is_bnf.induct` (auto-generated) | `is_bnf_induct` | proof | Lemma over `p: spec_fn`, one `requires` per intro rule (with `is_bnf` premises, as the generated rule). |
-| `convert_bnf` | `convert_bnf_spec` (spec, D20); exec `convert_bnf`, `ensures r == convert_bnf_spec(*f)` | spec + exec | |
+| `convert_bnf` | `convert_bnf_spec` (spec, D20); exec `convert_bnf`, `ensures r == convert_bnf_spec(*f)` plus `is_bnf`, equal complen, and (well-defined `f`) well-defined + equivalent; recursion in private `convert_bnf_unchecked` | spec + exec | |
 | `convert_bnf_is_bnf`, `convert_bnf_welldef`, `convert_bnf_equiv`, `convert_bnf_complen`, `bnf_convert_bnf`, `convert_bnf_convert_bnf` | same | proof | |
 | `{until,future,global,release}_base_mltl_semantics` | same | proof | |
 | `{until,future,global,release}_unrolling_mltl_semantics` | same | proof | `a+1` → `(a + 1) as usize` (fits since `a < b`). Helper `lemma_complen_bound`. |
@@ -106,6 +108,7 @@ but nothing ported here uses it.
 | `unsat_is_false` | same | proof | |
 | `atomic_props` | same | spec | Equal to `mltl.rs : atoms_mltl` — proved by new lemma `atomic_props_eq_atoms_mltl`. |
 | `atomics_agree` | same | spec | |
+| (FP) `complen_property` | `complen_property_via_atomics` | proof | | Same statement as AFP's progression corollary, proved in 10 lines from `atomics_agree_semantics` (π and π@ζ agree on the first complen steps). The progression crate keeps its port of the AFP proof under the AFP name. |
 | `atomics_agree_semantics` | same (+ helper `lemma_atomics_agree_drop`) | proof | Isabelle proof ~650 lines; here structural recursion on `f` with per-suffix IH. |
 
 ## Executable evaluators — `mltl-eval` (not in Isabelle beyond `mltl_eval`)

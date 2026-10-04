@@ -64,6 +64,20 @@ pub open spec fn atoms_mltl<A>(f: Mltl<A>) -> Set<A>
     }
 }
 
+/// Isabelle's generated `size` on `'a mltl`: one per constructor node, leaves
+/// included; interval bounds do not count. (Checked against Isabelle2025-2:
+/// `size (U T 3 4 (P 0)) = 3`, `size (F 3 4 (P 0)) = 2`.)
+pub open spec fn size_mltl<A>(f: Mltl<A>) -> nat
+    decreases f,
+{
+    match f {
+        Mltl::True | Mltl::False | Mltl::Prop(_) => 1,
+        Mltl::Not(g) | Mltl::Future(_, _, g) | Mltl::Global(_, _, g) => 1 + size_mltl(*g),
+        Mltl::And(g, h) | Mltl::Or(g, h) | Mltl::Until(g, _, _, h) | Mltl::Release(g, _, _, h) =>
+            1 + size_mltl(*g) + size_mltl(*h),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // List / nat helpers with Isabelle's (total) meaning
 // ---------------------------------------------------------------------------
@@ -74,6 +88,15 @@ pub open spec fn drop<T>(pi: Seq<T>, i: nat) -> Seq<T> {
         pi.skip(i as int)
     } else {
         Seq::empty()
+    }
+}
+
+/// Isabelle `take i π`: total; `π` when `i > length π`.
+pub open spec fn take<T>(pi: Seq<T>, i: nat) -> Seq<T> {
+    if i <= pi.len() {
+        pi.take(i as int)
+    } else {
+        pi
     }
 }
 
@@ -249,6 +272,54 @@ pub proof fn sanity_release_zero_bound()
     let e = seq![Set::<nat>::empty()];
     lemma_drop_zero(e);
     assert(!semantics_mltl(drop(e, 0), Mltl::Prop(0nat)));
+}
+
+// ---------------------------------------------------------------------------
+// Executable copy and equality (usize atoms, D19)
+// ---------------------------------------------------------------------------
+
+/// Executable deep copy: `clone_mltl(f) == *f`.
+pub fn clone_mltl(f: &Mltl<usize>) -> (r: Mltl<usize>)
+    ensures
+        r == *f,
+    decreases f,
+{
+    match f {
+        Mltl::True => Mltl::True,
+        Mltl::False => Mltl::False,
+        Mltl::Prop(p) => Mltl::Prop(*p),
+        Mltl::Not(g) => Mltl::Not(Box::new(clone_mltl(g))),
+        Mltl::And(g, h) => Mltl::And(Box::new(clone_mltl(g)), Box::new(clone_mltl(h))),
+        Mltl::Or(g, h) => Mltl::Or(Box::new(clone_mltl(g)), Box::new(clone_mltl(h))),
+        Mltl::Future(a, b, g) => Mltl::Future(*a, *b, Box::new(clone_mltl(g))),
+        Mltl::Global(a, b, g) => Mltl::Global(*a, *b, Box::new(clone_mltl(g))),
+        Mltl::Until(g, a, b, h) => Mltl::Until(Box::new(clone_mltl(g)), *a, *b, Box::new(clone_mltl(h))),
+        Mltl::Release(g, a, b, h) => Mltl::Release(Box::new(clone_mltl(g)), *a, *b, Box::new(clone_mltl(h))),
+    }
+}
+
+/// Executable structural equality (Isabelle `=` on `'a mltl`):
+/// `eq_mltl(f, g) == (*f == *g)`.
+pub fn eq_mltl(f: &Mltl<usize>, g: &Mltl<usize>) -> (r: bool)
+    ensures
+        r == (*f == *g),
+    decreases f,
+{
+    match (f, g) {
+        (Mltl::True, Mltl::True) => true,
+        (Mltl::False, Mltl::False) => true,
+        (Mltl::Prop(p), Mltl::Prop(q)) => *p == *q,
+        (Mltl::Not(f1), Mltl::Not(g1)) => eq_mltl(f1, g1),
+        (Mltl::And(f1, f2), Mltl::And(g1, g2)) => eq_mltl(f1, g1) && eq_mltl(f2, g2),
+        (Mltl::Or(f1, f2), Mltl::Or(g1, g2)) => eq_mltl(f1, g1) && eq_mltl(f2, g2),
+        (Mltl::Future(a, b, f1), Mltl::Future(c, d, g1)) => *a == *c && *b == *d && eq_mltl(f1, g1),
+        (Mltl::Global(a, b, f1), Mltl::Global(c, d, g1)) => *a == *c && *b == *d && eq_mltl(f1, g1),
+        (Mltl::Until(f1, a, b, f2), Mltl::Until(g1, c, d, g2)) =>
+            *a == *c && *b == *d && eq_mltl(f1, g1) && eq_mltl(f2, g2),
+        (Mltl::Release(f1, a, b, f2), Mltl::Release(g1, c, d, g2)) =>
+            *a == *c && *b == *d && eq_mltl(f1, g1) && eq_mltl(f2, g2),
+        _ => false,
+    }
 }
 
 } // verus!

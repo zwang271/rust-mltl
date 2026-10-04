@@ -637,6 +637,52 @@ pub proof fn convert_nnf_convert_nnf<A>(f: Mltl<A>)
     }
 }
 
+/// Not in Isabelle: negation normal form, i.e. `Not` is applied only to atoms.
+/// (Isabelle states the shape piecewise, e.g. `convert_nnf_form_Not_Implies_Prop`.)
+pub open spec fn is_nnf<A>(f: Mltl<A>) -> bool
+    decreases f,
+{
+    match f {
+        Mltl::True | Mltl::False | Mltl::Prop(_) => true,
+        Mltl::Not(g) => *g is Prop,
+        Mltl::And(phi, psi) | Mltl::Or(phi, psi) | Mltl::Until(phi, _, _, psi)
+        | Mltl::Release(phi, _, _, psi) => is_nnf(*phi) && is_nnf(*psi),
+        Mltl::Future(_, _, phi) | Mltl::Global(_, _, phi) => is_nnf(*phi),
+    }
+}
+
+/// Not in Isabelle: `convert_nnf` produces negation normal form.
+pub proof fn convert_nnf_is_nnf<A>(f: Mltl<A>)
+    ensures
+        is_nnf(convert_nnf_spec(f)),
+    decreases depth_mltl(f),
+{
+    reveal_with_fuel(depth_mltl, 2);
+    match f {
+        Mltl::True | Mltl::False | Mltl::Prop(_) => {},
+        Mltl::Not(g) => match *g {
+            Mltl::True | Mltl::False | Mltl::Prop(_) => {},
+            Mltl::Not(phi) => convert_nnf_is_nnf(*phi),
+            Mltl::And(phi, psi) | Mltl::Or(phi, psi) | Mltl::Until(phi, _, _, psi)
+            | Mltl::Release(phi, _, _, psi) => {
+                convert_nnf_is_nnf(Mltl::Not(phi));
+                convert_nnf_is_nnf(Mltl::Not(psi));
+            },
+            Mltl::Future(_, _, phi) | Mltl::Global(_, _, phi) => {
+                convert_nnf_is_nnf(Mltl::Not(phi));
+            },
+        },
+        Mltl::And(phi, psi) | Mltl::Or(phi, psi) | Mltl::Until(phi, _, _, psi)
+        | Mltl::Release(phi, _, _, psi) => {
+            convert_nnf_is_nnf(*phi);
+            convert_nnf_is_nnf(*psi);
+        },
+        Mltl::Future(_, _, phi) | Mltl::Global(_, _, phi) => {
+            convert_nnf_is_nnf(*phi);
+        },
+    }
+}
+
 /// `F = convert_nnf init_F ⟹ G ∈ subformulas F ⟹ ∃init_G. G = convert_nnf init_G`
 ///
 /// Returns the witness `init_G` (stronger form of Isabelle's `∃`).
@@ -2414,14 +2460,60 @@ pub proof fn atomics_agree_semantics<A>(pi: Seq<Set<A>>, pi2: Seq<Set<A>>, f: Ml
     }
 }
 
+/// AFP's `complen_property` (Mission_Time_LTL_Formula_Progression), proved
+/// here directly from `atomics_agree_semantics` instead of via formula
+/// progression: states after the computation length never change whether
+/// a trace satisfies `φ`. (`π` and `π @ ζ` agree on every atom for the
+/// first `|π| ≥ complen φ` steps.) The progression crate keeps its own port
+/// of the AFP proof under the AFP name.
+pub proof fn complen_property_via_atomics<A>(phi: Mltl<A>, pi: Seq<Set<A>>)
+    requires
+        intervals_welldef(phi),
+        pi.len() >= complen_mltl(phi),
+    ensures
+        semantics_mltl(pi, phi) == forall|zeta: Seq<Set<A>>| #[trigger] semantics_mltl(pi + zeta, phi),
+{
+    assert forall|zeta: Seq<Set<A>>| #[trigger] semantics_mltl(pi + zeta, phi) == semantics_mltl(pi, phi) by {
+        assert forall|i: nat, p: A| i < complen_mltl(phi) && atomic_props(phi).contains(p) implies
+            (#[trigger] pi[i as int].contains(p) <==> (pi + zeta)[i as int].contains(p)) by {
+            assert((pi + zeta)[i as int] == pi[i as int]);
+        }
+        atomics_agree_semantics(pi, pi + zeta, phi);
+    }
+    assert(pi + Seq::empty() =~= pi);
+}
+
 // ---------------------------------------------------------------------------
 // Executable normal-form conversions (D20, D20): exec `convert_nnf` /
 // `convert_bnf` return exactly the spec result, so every lemma about
 // `convert_nnf_spec` / `convert_bnf_spec` applies to their output.
 // ---------------------------------------------------------------------------
 
-/// Executable `convert_nnf`: `result == convert_nnf_spec(*f)`.
+/// Executable `convert_nnf`: push negations down to the atoms.
 pub fn convert_nnf(f: &Mltl<usize>) -> (r: Mltl<usize>)
+    ensures
+        // Computes exactly Isabelle's `convert_nnf f` ...
+        r == convert_nnf_spec(*f),
+        // ... which is in negation normal form ...
+        is_nnf(r),
+        // ... and, for well-defined intervals, means the same as `f` on every
+        // trace (`convert_nnf_preserves_semantics`).
+        intervals_welldef(*f) ==> semantic_equiv(r, *f),
+{
+    let r = convert_nnf_unchecked(f);
+    proof {
+        convert_nnf_is_nnf(*f);
+        if intervals_welldef(*f) {
+            assert forall|pi: Seq<Set<usize>>| #[trigger] semantics_mltl(pi, r) == semantics_mltl(pi, *f) by {
+                convert_nnf_preserves_semantics(pi, *f);
+            }
+        }
+    }
+    r
+}
+
+/// The recursion behind `convert_nnf`: `result == convert_nnf_spec(*f)`.
+fn convert_nnf_unchecked(f: &Mltl<usize>) -> (r: Mltl<usize>)
     ensures
         r == convert_nnf_spec(*f),
     decreases f,
@@ -2431,13 +2523,13 @@ pub fn convert_nnf(f: &Mltl<usize>) -> (r: Mltl<usize>)
         Mltl::False => Mltl::False,
         Mltl::Prop(p) => Mltl::Prop(*p),
         Mltl::Not(g) => convert_nnf_not(g),
-        Mltl::And(phi, psi) => Mltl::And(Box::new(convert_nnf(phi)), Box::new(convert_nnf(psi))),
-        Mltl::Or(phi, psi) => Mltl::Or(Box::new(convert_nnf(phi)), Box::new(convert_nnf(psi))),
-        Mltl::Future(a, b, phi) => Mltl::Future(*a, *b, Box::new(convert_nnf(phi))),
-        Mltl::Global(a, b, phi) => Mltl::Global(*a, *b, Box::new(convert_nnf(phi))),
-        Mltl::Until(phi, a, b, psi) => Mltl::Until(Box::new(convert_nnf(phi)), *a, *b, Box::new(convert_nnf(psi))),
+        Mltl::And(phi, psi) => Mltl::And(Box::new(convert_nnf_unchecked(phi)), Box::new(convert_nnf_unchecked(psi))),
+        Mltl::Or(phi, psi) => Mltl::Or(Box::new(convert_nnf_unchecked(phi)), Box::new(convert_nnf_unchecked(psi))),
+        Mltl::Future(a, b, phi) => Mltl::Future(*a, *b, Box::new(convert_nnf_unchecked(phi))),
+        Mltl::Global(a, b, phi) => Mltl::Global(*a, *b, Box::new(convert_nnf_unchecked(phi))),
+        Mltl::Until(phi, a, b, psi) => Mltl::Until(Box::new(convert_nnf_unchecked(phi)), *a, *b, Box::new(convert_nnf_unchecked(psi))),
         Mltl::Release(phi, a, b, psi) =>
-            Mltl::Release(Box::new(convert_nnf(phi)), *a, *b, Box::new(convert_nnf(psi))),
+            Mltl::Release(Box::new(convert_nnf_unchecked(phi)), *a, *b, Box::new(convert_nnf_unchecked(psi))),
     }
 }
 
@@ -2451,7 +2543,7 @@ fn convert_nnf_not(g: &Mltl<usize>) -> (r: Mltl<usize>)
         Mltl::True => Mltl::False,
         Mltl::False => Mltl::True,
         Mltl::Prop(p) => Mltl::Not(Box::new(Mltl::Prop(*p))),
-        Mltl::Not(phi) => convert_nnf(phi),
+        Mltl::Not(phi) => convert_nnf_unchecked(phi),
         Mltl::And(phi, psi) => Mltl::Or(Box::new(convert_nnf_not(phi)), Box::new(convert_nnf_not(psi))),
         Mltl::Or(phi, psi) => Mltl::And(Box::new(convert_nnf_not(phi)), Box::new(convert_nnf_not(psi))),
         Mltl::Future(a, b, phi) => Mltl::Global(*a, *b, Box::new(convert_nnf_not(phi))),
@@ -2463,8 +2555,33 @@ fn convert_nnf_not(g: &Mltl<usize>) -> (r: Mltl<usize>)
     }
 }
 
-/// Executable `convert_bnf`: `result == convert_bnf_spec(*f)`.
+/// Executable `convert_bnf`: rewrite into True/Prop/Not/And/Until only.
 pub fn convert_bnf(f: &Mltl<usize>) -> (r: Mltl<usize>)
+    ensures
+        // Computes exactly Isabelle's `convert_bnf f` ...
+        r == convert_bnf_spec(*f),
+        // ... which is in boolean normal form (`convert_bnf_is_bnf`) ...
+        is_bnf(r),
+        // ... has the same computation length (`convert_bnf_complen`) ...
+        complen_mltl(r) == complen_mltl(*f),
+        // ... and, for well-defined intervals, stays well-defined and means
+        // the same as `f` on every trace (`convert_bnf_welldef`, `convert_bnf_equiv`).
+        intervals_welldef(*f) ==> intervals_welldef(r) && semantic_equiv(*f, r),
+{
+    let r = convert_bnf_unchecked(f);
+    proof {
+        convert_bnf_is_bnf(*f);
+        convert_bnf_complen(*f);
+        if intervals_welldef(*f) {
+            convert_bnf_welldef(*f);
+            convert_bnf_equiv(*f);
+        }
+    }
+    r
+}
+
+/// The recursion behind `convert_bnf`: `result == convert_bnf_spec(*f)`.
+fn convert_bnf_unchecked(f: &Mltl<usize>) -> (r: Mltl<usize>)
     ensures
         r == convert_bnf_spec(*f),
     decreases f,
@@ -2473,20 +2590,20 @@ pub fn convert_bnf(f: &Mltl<usize>) -> (r: Mltl<usize>)
         Mltl::True => Mltl::True,
         Mltl::False => Mltl::Not(Box::new(Mltl::True)),
         Mltl::Prop(p) => Mltl::Prop(*p),
-        Mltl::Not(phi) => Mltl::Not(Box::new(convert_bnf(phi))),
-        Mltl::And(phi, psi) => Mltl::And(Box::new(convert_bnf(phi)), Box::new(convert_bnf(psi))),
+        Mltl::Not(phi) => Mltl::Not(Box::new(convert_bnf_unchecked(phi))),
+        Mltl::And(phi, psi) => Mltl::And(Box::new(convert_bnf_unchecked(phi)), Box::new(convert_bnf_unchecked(psi))),
         Mltl::Or(phi, psi) => Mltl::Not(Box::new(Mltl::And(
-            Box::new(Mltl::Not(Box::new(convert_bnf(phi)))),
-            Box::new(Mltl::Not(Box::new(convert_bnf(psi)))),
+            Box::new(Mltl::Not(Box::new(convert_bnf_unchecked(phi)))),
+            Box::new(Mltl::Not(Box::new(convert_bnf_unchecked(psi)))),
         ))),
-        Mltl::Future(a, b, phi) => Mltl::Until(Box::new(Mltl::True), *a, *b, Box::new(convert_bnf(phi))),
+        Mltl::Future(a, b, phi) => Mltl::Until(Box::new(Mltl::True), *a, *b, Box::new(convert_bnf_unchecked(phi))),
         Mltl::Global(a, b, phi) => Mltl::Not(Box::new(Mltl::Until(
-            Box::new(Mltl::True), *a, *b, Box::new(Mltl::Not(Box::new(convert_bnf(phi)))),
+            Box::new(Mltl::True), *a, *b, Box::new(Mltl::Not(Box::new(convert_bnf_unchecked(phi)))),
         ))),
-        Mltl::Until(phi, a, b, psi) => Mltl::Until(Box::new(convert_bnf(phi)), *a, *b, Box::new(convert_bnf(psi))),
+        Mltl::Until(phi, a, b, psi) => Mltl::Until(Box::new(convert_bnf_unchecked(phi)), *a, *b, Box::new(convert_bnf_unchecked(psi))),
         Mltl::Release(phi, a, b, psi) => Mltl::Not(Box::new(Mltl::Until(
-            Box::new(Mltl::Not(Box::new(convert_bnf(phi)))), *a, *b,
-            Box::new(Mltl::Not(Box::new(convert_bnf(psi)))),
+            Box::new(Mltl::Not(Box::new(convert_bnf_unchecked(phi)))), *a, *b,
+            Box::new(Mltl::Not(Box::new(convert_bnf_unchecked(psi)))),
         ))),
     }
 }
