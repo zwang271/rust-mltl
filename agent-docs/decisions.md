@@ -4,7 +4,7 @@ What is currently decided, grouped by topic, with the reason. This is a
 register, not a log: when a decision changes, edit the entry; delete entries
 that no longer matter (git keeps the history). Each entry is a few lines:
 the decision, why, and what it means for future work. IDs are stable anchors
-for cross-references; give new entries the next free number (next: D33).
+for cross-references; give new entries the next free number (next: D38).
 
 ## Repository, docs and process
 
@@ -18,8 +18,10 @@ for cross-references; give new entries the next free number (next: D33).
 - **D2 — Where agents may write.** Only inside this repo. Everything outside
   (the `MLTL_R2U2-` repo, AFP, the REU repo) is read-only reference.
   Third-party code we build against lives as git submodules under
-  `external/`, also read-only. No machine paths in agent-docs: use the
-  `REPO`/`ROOT`/`AFP`/`REU` placeholders from `project/sources.md`.
+  `external/`, also read-only. No machine-specific facts in anything committed (owner, 2026-10-03):
+  no paths, user names or hardware. Use the `REPO`/`ROOT`/`AFP`/`REU`
+  placeholders from `project/sources.md`; where they point on this machine,
+  and other local facts, go in the git-ignored `local-paths.md`.
 - **D7 — History lives in git.** No changelogs or conversation logs anywhere.
   Commit messages say what changed and why. Write dates only for decisions,
   observations of external state, and verification results (with the Verus
@@ -28,6 +30,21 @@ for cross-references; give new entries the next free number (next: D33).
   <noreply@anthropic.com>`, trailer `Agent: Claude Code (<model id>)`,
   committer = the owner (agents commit only when asked). Find them with
   `git log --author='(agent)'`.
+- **D37 — READMEs lead to the guarantee** (owner, 2026-10-03). Each crate
+  README links (file#Lline) to the main exec function, whose `ensures`
+  states the correctness property itself, not just `r == <name>_spec(..)`.
+  Beyond that it links only the definitions and lemmas needed to read that
+  guarantee (semantics, terms in the statement, the main theorems). Line
+  anchors rot: after editing any linked file run `scripts/readme_links.py`
+  (`--fix` repairs line numbers). Done for formula_progression, mltl-core
+  and mltl-eval (2026-10-03).
+  **Every file reference is a link** (owner: "basic courtesy"): in every
+  human doc (all `*.md` outside agent-docs/, plus `AGENTS.md`, `PLAN.md`),
+  any mention of a file or directory in the repo is a relative link,
+  including "Agent context" lines; a directory needs one link per doc.
+  `scripts/readme_links.py` (no args) checks line links, dead relative
+  links and unlinked file references. Run it before finishing any task that
+  touches docs or linked code.
 - **D30 — Keep agent-docs small, plain and current; talk to the owner in
   plain words.** Owner's attention is the bottleneck. agent-docs records only
   what a future agent needs: current state, decisions with reasons, hard-won
@@ -44,14 +61,29 @@ for cross-references; give new entries the next free number (next: D33).
   submodules; the fork URLs are deferred by the owner (open question Q10).
   For R2U2, first reproduce upstream's pinned verification setup (vstd
   2025-08-12, Rust 1.85.1). WEST upstream: https://github.com/zwang271/WEST.
-- **D10 — Parser syntax.** AFP-style formulas (`F[0,3](p & q)`) with arbitrary
-  identifiers as atoms. C2PO's input language is out of scope. The parser
-  returns `usize` atoms plus a symbol table, and prints with the original
-  names (see D19). Identifier rules: agent proposes, owner confirms (Q11).
+- **D10 — Parser syntax** (owner, 2026-10-02/03). The spec is
+  `src/mltl-parse/GRAMMAR.md` (owner reviews it line by line; it is the only
+  definition of "correct parser", so keep code and spec in lockstep).
+  AFP-style formulas, plus `->`, `<->` (AFP `Implies_mltl`/`Iff_mltl`) and
+  `^` (xor, libmltl; meaning `(a & !b) | (!a & b)`), all desugared to core
+  constructors. Constants `true`/`false`; `t`/`tt`/`f`/`ff` are reserved
+  keywords meaning the same (so libmltl formulas never silently read them
+  as atom names). `&`, `^`, `|`
+  chain left-associatively; `U`/`R` and `->`/`<->` chains need parentheses.
+  Ill-formed intervals (`a > b`) are rejected by the parser. Identifiers:
+  ASCII letter or `_` then letters/digits/`_`, case-sensitive; keywords
+  `F G U R true false` are never names. `p<N>` names keep the libmltl/WEST
+  meaning (atom N). C2PO's input language is out of scope. The parser
+  returns names; a verified numbering step maps them to `usize` atoms plus a
+  table (D19): `p<N>` (no leading zeros) is atom N; other names get the next
+  free number in order of first appearance, after the largest `p<N>`.
+  Tokens use longest match with no exceptions: libmltl's unspaced
+  `p0U[0,2]` is the name `p0U` (owner, 2026-10-03; libmltl input needs a
+  space before `U`/`R`).
 - **D11 — R2U2 target theorem.** `r2u2_core`'s output equals `semantics_mltl`.
   Known bugs may falsify it; handle them when reached (precondition or fix in
   the fork). The Isabelle R2U2 theories guide invariants, not the statement.
-- **D12 — Milestone order.** Toolchain → mltl-core → parser → formula
+- **D12 — Milestone order.** (Progression moved before the parser: D33.) Toolchain → mltl-core → parser → formula
   progression → language partitioning → SAT solver; WEST and R2U2 once their
   forks exist. Reason: the core is shared; the parser makes test formulas
   easy; formula progression is the smallest algorithm.
@@ -60,11 +92,29 @@ for cross-references; give new entries the next free number (next: D33).
   `properties.rs`. R2U2-specific parts (the r2u2-form section and the
   parse tree with auxiliary data, which exists to carry monitor state) wait
   for the R2U2 milestone.
+- **D33 — Formula progression before the parser** (owner, 2026-10-03).
+  Supersedes the parser-first order in D12 for this one step. Scope: the
+  AFP theory and the unpublished `Formula_Progression_Extended.thy`
+  (simplifier, `prog`, `prog_early_eval`); owner: "definitely want it
+  integrated with the simplifier". Reason: plain progression grows the
+  formula without bound, so only `prog` is useful in practice.
 - **D18 — SAT solver source.** The MLTL SAT solver formalization is in
   `REU/isabelle/` (`MLTL_SAT_Solver.thy`, `Fast_MLTL_To_SAT*.thy`, CNF and
   SAT-solver theories). Unpublished, read-only, not yet surveyed.
 
 ## Semantics and representation
+
+- **D34 — Formula progression crate layout** (owner chose the directory,
+  2026-10-03). Crate `src/formula_progression` (package `formula_progression`,
+  not `mltl-*`: the owner kept the existing directory). It depends on
+  `mltl-eval` only for the executable `Trace` / `trace_view` (and uses
+  `mltl_eval` in tests). If more crates need traces, move `trace.rs` into
+  `mltl-core` instead of depending on the evaluators.
+- **D35 — Shared exec helpers live in mltl-core.** `take` (total, Isabelle
+  `take`), `clone_mltl` (verified deep copy) and `eq_mltl` (verified
+  structural equality) are in `mltl-core/src/mltl.rs`, since any algorithm
+  that returns subformulas or compares formulas needs them. No `derive`s on
+  `Mltl` (Verus's handling of derived impls unchecked).
 
 - **D15 — One formula type.** `Mltl<A>` (in `mltl.rs`) serves spec and exec
   code; variants named after the Isabelle constructors. Bounds are `usize`
@@ -93,6 +143,13 @@ for cross-references; give new entries the next free number (next: D33).
   wrong on short traces; we don't model them.
 
 ## Evaluators and benchmarks
+
+- **D36 — Exec code that rebuilds formulas takes ownership.** Functions
+  whose result reuses parts of the input (progression, simplifiers) take
+  `Mltl<usize>` by value, move subformulas and reuse boxes (`*b = f(*b)`);
+  borrowed wrappers (`prog(&f)`) copy once at the entry. Reason: measured
+  2026-10-03, copying made the verified `prog` 3–5× slower than the
+  Isabelle-exported Haskell, 75% of the time in malloc/free; moving fixed it.
 
 - **D23 — Two verified evaluators.** `mltl-eval` has `mltl_eval` (top-down) and
   `mltl_eval_bottom_up` (tables per subformula over the positions that

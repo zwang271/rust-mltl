@@ -25,11 +25,11 @@ implementations — so the code that runs is the code that is verified.
 
 ## Layout
 
-- `src/` — Rust code and Verus proofs. Each module folder has a short
+- [`src/`](src/) — Rust code and Verus proofs. Each module folder has a short
   `README.md` explaining what it does and which Isabelle theory it follows.
-- `agent-docs/` — working notes maintained by AI coding agents. Not intended
+- [`agent-docs/`](agent-docs/) — working notes maintained by AI coding agents. Not intended
   for human reading.
-- `AGENTS.md` — rules for AI agents working in this folder.
+- [`AGENTS.md`](AGENTS.md) — rules for AI agents working in this folder.
 
 ## Status
 

@@ -18,10 +18,5 @@ Ask the owner when a question blocks work; move answered items to
   fork rather than a branch is wanted for an owner-owned repo)
   `zwang271/WEST`, and give URLs. Blocks T6.1, T8.1-onward.
   Deferred by the owner (2026-10-02).
-- **Q11 — Identifier syntax** for parser atoms (D10): which characters, can
-  identifiers clash with keywords (`F`, `G`, `U`, `R`, `true`, `false`, …),
-  case sensitivity? Agent proposes in T3.1, owner confirms.
 - **Q13 — Integration for the GA project**: Python (PyO3 bindings, like
-  libmltl's pybind) or Rust? Should the parser also accept libmltl syntax
-  (`!`, `&`, `|`, `^`, `->`, `<->`, `p<N>`, `t/f`)?
-
+  libmltl's pybind) or Rust? (The syntax part is settled in D10.)

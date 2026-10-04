@@ -6,7 +6,7 @@ Task IDs `T<milestone>.<n>`. Sizes: S ≈ a day, M days, L a week+, XL weeks.
 Order and reasons: D12.
 
 ```
-M1 toolchain ─> M2 mltl-core ─┬─> M3 parser ─> M4 progression ─> M5 lang-partition ─> M7 SAT
+M1 toolchain ─> M2 mltl-core ─┬─> M4 progression (done) ─> M3 parser (done) ─> M5 lang-partition ─> M7 SAT
                                ├─(fork URLs)─> M6 WEST in place
                                └─(fork URLs)─> M8 R2U2 in place
 M9 cross-cutting, alongside.   M10 fast evaluator: scalar part done, batching shelved.
@@ -24,41 +24,18 @@ M9 cross-cutting, alongside.   M10 fast evaluator: scalar part done, batching sh
   - T2.8: write down how generic atoms meet `usize` atoms (mostly settled
     by D19).
 
-## M3 — Verified parser/printer (goal 6)
-Syntax per D10 (AFP-style, arbitrary identifiers). Create `correspondence/parser.md`, `modules/mltl-parse.md`.
-- T3.1 (S) Write the grammar (precedence, associativity, interval syntax,
-  identifier rules → propose answer to Q11, whitespace) as a doc page; decide
-  the atom type the parser produces (D10 consequences); compare with the lark grammar in
-  `ROOT/experiments/run_r2u2_sml.py` and whatever WEST/C2PO accept.
-- T3.2 (M) Spec: spec printer `print(f): Seq<char>` (fully or minimally
-  parenthesised) + spec of the accepted language. Correctness statements:
-  (a) `parse(print(f)) == Some(f)`; (b) `parse(s) == Some(f) ==> s` is in the
-  language and denotes `f` (soundness); (c) completeness for the grammar.
-- T3.3 (M) Exec lexer + recursive-descent parser over `&[u8]`/`&str`;
-  termination via input length; error type.
-- T3.4 (L) Proofs of (a)–(c). Fallback if (c) is costly: prove (a)+(b), record
-  (c) as PLANNED.
-- T3.5 (S) Exec printer proved equal to spec printer.
-- T3.6 (S) Differential test vs the lark parser on a corpus (existing
-  experiment formulas + random generation).
-- Exit: parser/printer `VERIFIED` for (a),(b); goal 6 done for text syntax.
-  R2U2 binary format is T8.9.
+## M3 — Verified parser/printer (goal 6) — done 2026-10-03
+Crate `src/mltl-parse`; details `modules/mltl-parse.md`. Verified: lexer,
+grammar relations, parser sound + complete (hence unambiguous), printer
+with round trip, numbering (injective, `pN` kept, truth-preserving), AFP
+binding examples. Open: error positions,
+differential test against other parsers (the lark parser is no longer on
+this machine).
 
-## M4 — Formula progression (goal 5)
-Source: AFP `MLTL_Formula_Progression.thy` (2285 lines); also local
-`ROOT/isabelle/Formula_Progression_Extended.thy` (1612, sorry-free).
-- T4.1 (S) Correspondence page; list defs: `weight_operators`,
-  `formula_progression_len1`, `formula_progression`; theorems:
-  `formula_progression_decomposition`, `satisfiability_preservation`,
-  `formula_progression_correctness(_alt)`.
-- T4.2 (M) Spec fns, with the same termination measure as Isabelle's
-  `function` proof (check its `termination` block).
-- T4.3 (M) Exec impl, proved equal to spec; avoid exponential cloning
-  (consider `Rc`/arena only if Verus supports it — record).
-- T4.4 (L) Port the main theorems (and helper lemmas they need).
-- T4.5 (S) Optional: port useful lemmas from `Formula_Progression_Extended`.
-- T4.6 (S) Benchmark vs `ROOT/formula_progression_api` exported code.
-- Exit: correctness theorem `VERIFIED` against `mltl-core` semantics.
+## M4 — Formula progression (goal 5) — done 2026-10-03, ahead of M3 (D33)
+Both theories ported and verified (`correspondence/formula-progression.md`,
+`modules/formula-progression.md`). Left over:
+- T4.6 done 2026-10-03 (`modules/formula-progression.md`, Performance).
 
 ## M5 — Language partitioning (goal 5)
 Source: AFP `MLTL_Language_Partition_*` (Algorithm 241 lines, Proof 6671).

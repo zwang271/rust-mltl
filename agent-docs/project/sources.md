@@ -2,15 +2,16 @@
 
 Everything listed here is **read-only** for agents. Paths use these
 placeholders; other pages use them too and must not hard-code machine paths.
+Where they point on the current machine: `../local-paths.md` (git-ignored,
+one per machine; create it if missing).
 
-| Placeholder | What it is | Owner's machine (2026-10-02) |
-|---|---|---|
-| `REPO` | this repo (rust-mltl) | `/Users/wangzili/Documents/rust-mltl` |
-| `ROOT` | `MLTL_R2U2-` repo (local Isabelle R2U2 work, `r2u2` submodule, experiments) | `/Users/wangzili/Documents/MLTL_R2U2-` |
-| `AFP` | Archive of Formal Proofs release 2026-09-11 (https://www.isa-afp.org) | `~/afp-2026-09-11` |
-| `REU` | `isabelle-group` repo of the Iowa State REU 2026 (MLTL→SAT translation work) | `/Users/wangzili/Documents/REU2026/isabelle-group` |
+| Placeholder | What it is |
+|---|---|
+| `REPO` | this repo (rust-mltl) |
+| `ROOT` | `MLTL_R2U2-` repo (local Isabelle R2U2 work, `r2u2` submodule, experiments) |
+| `AFP` | Archive of Formal Proofs release 2026-09-11 (https://www.isa-afp.org) |
+| `REU` | `isabelle-group` repo of the Iowa State REU 2026 (MLTL→SAT translation work) |
 
-On another machine, update the last column (or add a row per machine).
 Last surveyed 2026-10-02.
 
 ## AFP (published Isabelle) — `AFP/thys/`
@@ -37,7 +38,7 @@ Last surveyed 2026-10-02.
 
 ### `Mission_Time_LTL_Formula_Progression`
 - `MLTL_Formula_Progression.thy` (2285): `weight_operators`,
-  `formula_progression_len`, `formula_progression`; theorems
+  `formula_progression_len1`, `formula_progression`; theorems
   `formula_progression_decomposition`, `satisfiability_preservation`,
   `formula_progression_correctness(_alt)`.
 
@@ -69,7 +70,7 @@ Session `MLTL_Parsing_Trees` (`ROOT/isabelle/ROOT`, `quick_and_dirty`), builds o
 | `MLTL_Update_and_R2U2_Engine_Step` | 3293 | 86 | |
 | `Rewrite_Rules_and_Proofs` | 2033 | 85 | |
 | `R2U2_Bugs` | 463 | 0 | documented R2U2 bugs |
-| `Formula_Progression_Extended` | 1612 | 0 | |
+| `Formula_Progression_Extended` | 1612 | 0 | simplifier + `prog`; ported (D33) |
 
 Deprecated monolithic backups (excluded from session): `R2U2_Engine`,
 `R2U2_Algorithm`, `R2U2_Proofs`. Also `R2U2_Function_Codex.thy` (Codex-assisted
@@ -102,8 +103,13 @@ semantics diverge.
 - `ROOT/experiments/`: `r2u2.sml` (Isabelle export), `run_r2u2_sml.py`
   (untrusted Python/lark parser → SML AST — the thing goal 6 removes),
   `run_r2u2.py`, `verify_r2u2.py` (conformance testing).
-- `ROOT/formula_progression_api/`: a deployed API around exported formula
-  progression code (has `codegen/`).
+- `ROOT/formula_progression_api/`: a deployed API (FastAPI + lark parser,
+  Cloud Run) around exported formula progression code. `codegen/`:
+  `formula_progression.hs` (Isabelle export of `prog`, unary `Nat`, sets as
+  lists) and `run_prog.hs` (reads `Mltl Nat` and the trace with derived
+  `Read`, prints `prog` of every prefix). One process per request. Used
+  read-only by `src/formula_progression/benchmarks` (built into its
+  `build/`; needs GHC).
 - `ROOT/sabre/`: SABRe (`github.com/cgjohannsen/sabre`, `c7b059eb`), an MLTL
   runtime monitor that generates C code evaluating formulas with bitwise
   operations over machine words of time steps. Prior art that our
@@ -182,6 +188,6 @@ semantics diverge.
   2048), `R2U2_MAX_TL_INSTRUCTIONS` (256), etc., overridable by env vars at
   compile time.
 
-## Not on this machine
+## Not available locally
 - **WEST Rust implementation** — https://github.com/zwang271/WEST (owner's
   public repo; D9). To be brought in as a fork submodule under `vendor/`.

@@ -24,7 +24,7 @@ then what your task needs. Ground rules are in `../AGENTS.md` §3–5.
 ## By topic
 | Topic | Page |
 |---|---|
-| Where every external source lives (placeholders `REPO`, `ROOT`, `AFP`, `REU`) | `project/sources.md` |
+| Where every external source lives (placeholders `REPO`, `ROOT`, `AFP`, `REU`) | `project/sources.md`; this machine's paths: `local-paths.md` (git-ignored) |
 | Milestones and tasks | `project/plan.md` (owner's summary: `../PLAN.md`) |
 | Shelved batched-evaluator design | `project/m10-batched-eval.md` |
 | Ideas and possible new directions | `ideas.md` |
@@ -32,7 +32,7 @@ then what your task needs. Ground rules are in `../AGENTS.md` §3–5.
 | Verus: toolchain, commands, pitfalls | `verification/verus-notes.md` |
 | Everything trusted without proof | `verification/trusted-base.md` |
 | Isabelle ↔ Rust tables | `correspondence/` |
-| Per-module notes | `modules/` (`mltl-core.md`, `mltl-eval.md`) |
+| Per-module notes | `modules/` (`mltl-core.md`, `mltl-eval.md`, `formula-progression.md`, `mltl-parse.md`) |
 | Human docs that need an owner-approved fix | `human-doc-backlog.md` |
 | Throwaway spikes (not built) | `verification/spikes/` |
 

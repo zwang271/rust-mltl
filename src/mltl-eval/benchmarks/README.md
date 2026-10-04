@@ -2,10 +2,10 @@
 
 Timing experiments for the two verified MLTL evaluators of `mltl-eval`
 (top-down `mltl_eval`, bottom-up `mltl_eval_bottom_up`) and, for reference,
-[libmltl](https://github.com/lmarzen/libmltl) (submodule `external/libmltl`)
+[libmltl](https://github.com/lmarzen/libmltl) (submodule [`external/libmltl`](../../../external/libmltl/))
 and the Rust monitor of [R2U2](https://github.com/R2U2/r2u2) (submodule
-`external/r2u2`). The algorithms and their complexity are explained in
-`../EVAL_MLTL.md`; these experiments measure them.
+[`external/r2u2`](../../../external/r2u2/)). The algorithms and their complexity are explained in
+[`../EVAL_MLTL.md`](../EVAL_MLTL.md); these experiments measure them.
 
 ## Running
 
@@ -13,12 +13,12 @@ and the Rust monitor of [R2U2](https://github.com/R2U2/r2u2) (submodule
 git submodule update --init external/libmltl external/r2u2   # once, from the repo root
 cd src/mltl-eval/benchmarks
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-.venv/bin/python run.py          # full run (~13 minutes on an M-series Mac); --quick for a smoke test,
+.venv/bin/python run.py          # full run (~13 minutes on a laptop); --quick for a smoke test,
                                  # --only exp1,exp2 for a subset
 .venv/bin/python plot.py         # writes plots/*.png and prints growth exponents
 ```
 
-`run.py` generates the workloads (`gen_workloads.py`), builds the drivers,
+[`run.py`](run.py) generates the workloads ([`gen_workloads.py`](gen_workloads.py)), builds the drivers,
 times every evaluator on every workload, and writes `results/*.csv`.
 Timings cover evaluation only: formulas are parsed (and, for R2U2, compiled
 by C2PO, about 0.4 s per formula) before timing starts, and R2U2's monitor
@@ -43,10 +43,10 @@ Each plot's legend gives an empirical growth exponent: the slope of a
 least-squares fit through the upper half of the points on log-log axes
 (1 = linear, 2 = quadratic).
 
-## Results (2026-10-03, Apple M-series laptop)
+## Results (2026-10-03, one laptop run)
 
 "Bit rows" is the same verified bottom-up algorithm reading atoms from a
-bit-row trace instead of a set per step (see `../README.md`).
+bit-row trace instead of a set per step (see [`../README.md`](../README.md)).
 
 Growth exponents fitted on log-log axes:
 
@@ -107,17 +107,17 @@ Time per evaluation at the largest point:
 
 ## Files
 
-- `gen_workloads.py`: deterministic workload generator.
-- `driver.rs`: driver for the Rust evaluators (built as the cargo example
+- [`gen_workloads.py`](gen_workloads.py): deterministic workload generator.
+- [`driver.rs`](driver.rs): driver for the Rust evaluators (built as the cargo example
   `bench_driver`). Its formula parser is unverified benchmark scaffolding.
-- `proto.rs`: unverified prototype used to try trace representations before
+- [`proto.rs`](proto.rs): unverified prototype used to try trace representations before
   proving them (`--impls proto-hash,proto-bits,proto-masks`).
-- `libmltl_driver.cc`: the same driver for libmltl.
-- `r2u2_driver/`: the same driver for R2U2's Rust monitor (separate crate on
+- [`libmltl_driver.cc`](libmltl_driver.cc): the same driver for libmltl.
+- [`r2u2_driver/`](r2u2_driver/): the same driver for R2U2's Rust monitor (separate crate on
   R2U2's pinned toolchain; formulas are compiled by R2U2's C2PO). It works
   around an R2U2 bug where `Monitor::reset` does not clear the temporal-logic
   instruction count.
-- `run.py`, `plot.py`: run everything; plot results.
+- [`run.py`](run.py), [`plot.py`](plot.py): run everything; plot results.
 
-Agent context: agent-docs/modules/mltl-eval.md,
-agent-docs/project/plan.md (M10).
+Agent context: [agent-docs/modules/mltl-eval.md](../../../agent-docs/modules/mltl-eval.md),
+[agent-docs/project/plan.md](../../../agent-docs/project/plan.md) (M10).

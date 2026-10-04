@@ -70,16 +70,16 @@ Neither always wins. On random traces with wide windows, top-down's early
 exits usually find the answer within a step or two. When windows must be
 scanned fully, bottom-up's linear cost wins by large factors.
 
-| workload (from `benchmarks/`) | top-down | bottom-up | bottom-up, bit rows | libmltl | R2U2 |
+| workload (from [`benchmarks/`](benchmarks/)) | top-down | bottom-up | bottom-up, bit rows | libmltl | R2U2 |
 |---|---|---|---|---|---|
 | ~45-node formula, 2M steps | 4.5 s | 0.49 s | **0.14 s** | 1.4 s | 1.3 s |
 | intervals scanned fully, 16K steps | 60 ms | 94 µs | **25 µs** | 11 ms | 0.32 ms |
 | random traces, 16K steps | 54 µs | 190 µs | 59 µs | **30 µs** | 190 µs |
 
 "Bit rows" is the same bottom-up algorithm on a faster trace format
-(`README.md`).
+([`README.md`](README.md)).
 
-Plots, methodology and all experiments: `benchmarks/README.md`.
+Plots, methodology and all experiments: [`benchmarks/README.md`](benchmarks/README.md).
 
 ## Compared with R2U2
 

@@ -40,7 +40,7 @@ effect, what didn't work, which invariant it relies on). If a proof later
 forces a change, the log says which fix costs least performance.
 
 ## Lessons log (trace representation, T10.4; scope per D32)
-Benchmark: heavy formula (~45 nodes, 8 atoms), 1M-step trace, Apple M-series,
+Benchmark: heavy formula (~45 nodes, 8 atoms), 1M-step trace,
 2026-10-03. Prototype = `src/proto.rs` (plain Rust, generic over `AtomRead`).
 1. Profile of verified bottom-up (`sample`): 73% hash lookups for atoms,
    17% table building, 10% next arrays. Ceiling from representation ≈ 3.7×

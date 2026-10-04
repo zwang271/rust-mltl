@@ -65,7 +65,7 @@ aggregation (Tangwongsan et al.; SWAG survey). Citation from memory, not checked
 
 - Layout: word `p[k]`, bit t = "atom p true at position k of trace t".
   Every table entry is a word; every ⊕ is one bitwise op (U: ~3) for 64
-  traces at once. With SIMD: 128 (NEON, M-series), 256/512 (AVX2/AVX-512).
+  traces at once. With SIMD: 128 (NEON), 256/512 (AVX2/AVX-512).
 - Next-position arrays (current scalar `mltl_eval_bottom_up`) do NOT batch:
   each trace has its own next position. Sliding folds have no per-trace
   state and are branch-free, so all lanes advance in lockstep.

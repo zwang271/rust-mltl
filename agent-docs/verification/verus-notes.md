@@ -6,14 +6,12 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
 ## Toolchain (installed 2026-10-02, T1.1)
 - Verus `0.2026.09.27.3cf1832` (latest non-prerelease on 2026-10-02; a newer
   rolling prerelease `0.2026.10.02.f319e4d` existed and was skipped). Policy: D9.
-- Source: GitHub release asset `verus-0.2026.09.27.3cf1832-arm64-macos.zip`.
-- Install layout on owner's machine: `~/.verus/<version>/verus-arm64-macos/`;
-  `~/.verus/current` symlink → active version; `~/.cargo/bin/verus` and
-  `~/.cargo/bin/cargo-verus` symlink into `~/.verus/current/`. To upgrade:
-  unzip new version, repoint `current`, install its rust toolchain.
-- Requires rust toolchain `1.98.1-aarch64-apple-darwin` (installed via
-  `rustup install`; Verus selects it itself via `RUSTUP_TOOLCHAIN`). `verus`
-  prints the exact `rustup install` command if missing.
+- Source: the GitHub release asset for your platform
+  (`verus-0.2026.09.27.3cf1832-<platform>.zip`). This machine's install
+  layout: `../local-paths.md`.
+- Requires Rust toolchain `1.98.1` for your platform (install with `rustup
+  install`; Verus selects it itself via `RUSTUP_TOOLCHAIN`). `verus` prints
+  the exact `rustup install` command if it is missing.
 - Bundled Z3 4.16.0.
 - `cargo verus` subcommands: `new`, `toolchain`, `verify`, `focus`, `build`,
   `check`. Plan to use `cargo verus verify` for the workspace (T1.2).
@@ -163,12 +161,37 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
 - **Plain builds erase spec items**: a `pub use` of a spec fn from `lib.rs`
   breaks `cargo build` (E0432); re-export exec items only.
 
-## Spikes
-- `spikes/m1-semantics-spike.rs` (T1.4, 2026-10-02, VERIFIED: 14 verified,
-  0 errors; not part of the build). Contains: generic `Formula<A>` enum with
-  `Box` children and `usize` bounds; full `semantics` spec over
-  `Seq<ISet<A>>` (all 10 cases); total `drop`; the three `MLTL_Encoding.thy`
-  example lemmas; `Vec<Vec<bool>>` trace with view to `Seq<ISet<nat>>`;
-  `view_f: Formula<usize> -> Formula<nat>`; exec `eval` proved equal to
-  `semantics` for True/False/Prop/Not/And/Or/Future (loop over `[a, min(b, rem)]`).
-  Starting point for T2.2–T2.7.
+- **Fuel runs out one level down.** Unfolding `semantics_mltl(pi, Or(phi,
+  psi))` at fuel 1 leaves `semantics_mltl(pi, phi)` with no fuel, so even
+  `phi == False` facts don't fire: `False ∨ ψ ≡ ψ` failed until
+  `reveal_with_fuel(semantics_mltl, 2)` inside the `assert forall` (seen in
+  `formula_progression/src/simp.rs`, 2026-10-03). Same for nested results like
+  `Or(x, And(y, Until(..)))`: give fuel = nesting depth.
+- **Quantified ensures + big case split → rlimit.** A lemma ensuring
+  `forall rho. …` over ten cases timed out; the same lemma with `rho` as a
+  parameter verified instantly, wrapped by a 3-line `assert forall … by {
+  lemma_at(.., rho) }` (`complen_one_len1_value_at`).
+- **Exec pattern matching through boxes works**: `match &**g { … }` and
+  `match (&**x, &**y) { (Mltl::Not(phi), Mltl::Not(psi)) => … }` verify, and
+  structural `decreases f` accepts recursive calls on such nested bindings.
+- **Loop until a flag clears**: `decreases size(cur) + if changed { 1nat }
+  else { 0nat }` handles the last iteration where nothing shrinks
+  (`simp_mltl`).
+- **Moving out of a `Box` works** (Verus 0.2026.09.27): `match *g {..}`,
+  `let x = *g;`, and re-filling with `*g = f(*g)` to reuse the allocation all
+  verify; spec side reads `*f->Not_0` (the field is a `Box`).
+- **A moved parameter loses its facts inside a loop**: with `let ghost f0 =
+  f; let mut cur = f; while .. { .. return h; }`, `ensures r == spec(f, ..)`
+  failed at the early `return` until the invariant restated `f0 == f`
+  (`formula_progression_alt_owned`).
+- **Importing proof fns by name breaks plain `cargo build`** (they are
+  erased): `use crate::m::{some_lemma}` → E0432 outside Verus. Guard it with
+  `#[cfg(verus_only)]` (glob imports are fine unguarded).
+- **`return` inside a `while`** is fine; the function's `ensures` is checked
+  at the return (`formula_progression_alt`).
+
+- (2026-10-03, parser) Postconditions on `&mut` args must say `final(x)` (or
+  `old(x)`); `decreases_to!` is unavailable here; spec-only items imported by
+  name break plain `cargo build` (use glob imports). Parser-specific proof
+  patterns: `modules/mltl-parse.md`.
+

@@ -1,6 +1,6 @@
 # AGENTS.md — rust-mltl
 
-Read this before you touch anything in `rust-mltl/`. Then read `agent-docs/INDEX.md`.
+Read this before you touch anything in `rust-mltl/`. Then read [`agent-docs/INDEX.md`](agent-docs/INDEX.md).
 
 ## 1. What this project is
 
@@ -10,7 +10,7 @@ re-establishes the existing Isabelle/HOL formalizations of the Mission-time LTL
 workflow of "prove in Isabelle → extract SML/Haskell → write an untrusted parser
 → conformance-test against the real tool".
 
-Goals (details and rationale: `agent-docs/project/goals.md`):
+Goals (details and rationale: [`agent-docs/project/goals.md`](agent-docs/project/goals.md)):
 
 1. **Faithful encoding.** Port the formalized MLTL ecosystem into Verus with
    specs that correspond, definition by definition, to the Isabelle sources:
@@ -24,7 +24,7 @@ Goals (details and rationale: `agent-docs/project/goals.md`):
 3. **Verify R2U2 in place.** Verify the real Rust R2U2 monitor source
    (`r2u2_core`), not an Isabelle model of it.
 4. **Verify WEST in place.** Verify Zili Wang's existing Rust WEST
-   implementation (public WEST repo; not yet on this machine).
+   implementation (public WEST repo; not yet in this repo).
 5. **Port and verify** formula progression and language partitioning in Rust.
 6. **Remove the untrusted parser.** Parsing from concrete syntax to the
    verified AST is itself specified and verified.
@@ -34,12 +34,12 @@ Goals (details and rationale: `agent-docs/project/goals.md`):
 | Path | Audience | Who may write it |
 |---|---|---|
 | `AGENTS.md` (this file) | agents | humans; agents only when a human asks |
-| `README.md`, any other `*.md` outside `agent-docs/` (incl. `src/**/README.md`) | **humans** | see §3.2 |
+| [`README.md`](README.md), any other `*.md` outside [`agent-docs/`](agent-docs/) (incl. `src/**/README.md`) | **humans** | see §3.2 |
 | `agent-docs/` | agents | agents, freely — it is ours to maintain |
-| `src/` | both | Rust code + Verus proofs, plus short READMEs |
+| [`src/`](src/) | both | Rust code + Verus proofs, plus short READMEs |
 
 Work **only inside this repo (`rust-mltl/`)**. Everything outside it
-(the `MLTL_R2U2-` repo with its `isabelle/` and `r2u2/`, `~/afp-*`, …; paths in `agent-docs/project/sources.md`) is read-only reference material unless
+(the `MLTL_R2U2-` repo with its `isabelle/` and `r2u2/`, the AFP, …; paths in [`agent-docs/project/sources.md`](agent-docs/project/sources.md)) is read-only reference material unless
 the human explicitly says otherwise.
 
 ## 3. Code of conduct for documentation
@@ -47,7 +47,7 @@ the human explicitly says otherwise.
 ### 3.1 `agent-docs/` is the source of truth for agents
 
 - It is the long-term memory of this project. Any agent starting a task MUST
-  consult `agent-docs/INDEX.md` and the pages relevant to the task first.
+  consult [`agent-docs/INDEX.md`](agent-docs/INDEX.md) and the pages relevant to the task first.
 - Keep it **true**. If you change code, decisions, status, or discover a fact,
   update the relevant `agent-docs/` page in the same piece of work. A stale
   page is a bug; fix it when you see it.
@@ -60,7 +60,7 @@ the human explicitly says otherwise.
   `ASSUMED`, `PLANNED`, or `UNKNOWN`. Never write that something is verified
   unless Verus actually accepted it, and say which command/version you ran.
 - Structure is flexible; reorganize when it stops serving. Keep
-  `agent-docs/INDEX.md` an accurate map after any reorganization.
+  [`agent-docs/INDEX.md`](agent-docs/INDEX.md) an accurate map after any reorganization.
 - Date log entries with absolute dates (YYYY-MM-DD).
 
 ### 3.2 Human-facing docs
@@ -71,7 +71,7 @@ Every Markdown file outside `agent-docs/` (except this file) is for humans.
   short, plain, explain *what* and *why*, link out for depth.
 - Agents MUST NOT edit an existing human-facing doc unless a human asks for
   that edit in the current task. If you notice one is stale or wrong, add an
-  entry to `agent-docs/human-doc-backlog.md` and tell the human.
+  entry to [`agent-docs/human-doc-backlog.md`](agent-docs/human-doc-backlog.md) and tell the human.
 - Exception: when a human-requested task creates a **new** directory under
   `src/`, the agent creates that directory's `README.md` (see §3.3) as part
   of the task and mentions it in its report.
@@ -95,11 +95,11 @@ Keep these short (aim < 40 lines). Depth goes in `agent-docs/`.
 
 - Every `assume`, `admit`, `#[verifier::external_body]`,
   `#[verifier::external]`, axiom, or `uninterp` spec MUST be recorded in
-  `agent-docs/verification/trusted-base.md` with location and justification.
+  [`agent-docs/verification/trusted-base.md`](agent-docs/verification/trusted-base.md) with location and justification.
   Unrecorded trust is not allowed.
 - Do not weaken a spec to make a proof go through without recording the
   change and why in `agent-docs/` (and, if it diverges from Isabelle, in the
-  relevant `agent-docs/correspondence/` page).
+  relevant [`agent-docs/correspondence/`](agent-docs/correspondence/) page).
 - Specs should mirror the Isabelle definitions. When Rust needs a different
   shape (e.g. `Vec` vs `list`, `usize` vs `nat`, bounded integers), document
   the correspondence and the bridging lemma.
@@ -109,6 +109,6 @@ Keep these short (aim < 40 lines). Depth goes in `agent-docs/`.
 
 - Prefer small, verifiable increments; leave the tree in a state where
   verification passes, or record precisely what is broken in
-  `agent-docs/status.md`.
+  [`agent-docs/status.md`](agent-docs/status.md).
 - Use inclusive terminology (no master/slave/whitelist/blacklist).
 - Don't commit or push unless the human asks.
