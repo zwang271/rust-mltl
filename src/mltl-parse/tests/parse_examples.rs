@@ -19,7 +19,7 @@ fn show(f: &Mltl<Vec<u8>>) -> String {
 }
 
 fn p(s: &str) -> Option<String> {
-    parse_str(s).map(|f| show(&f))
+    parse_str(s).ok().map(|f| show(&f))
 }
 
 #[test]
@@ -126,5 +126,5 @@ fn numbering_example() {
         },
         _ => panic!("shape"),
     }
-    assert!(parse_numbered(b"p18446744073709551615").is_none());
+    assert!(parse_numbered(b"p18446744073709551615").is_err());
 }

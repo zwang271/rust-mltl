@@ -2,8 +2,8 @@
 
 Verified parser, printer and atom numbering (goal 6). Spec for humans:
 `src/mltl-parse/GRAMMAR.md` (owner-reviewed; keep it and `grammar.rs` in
-lockstep, D10). VERIFIED 2026-10-03: 139 items, 0 errors, nothing assumed;
-`cargo test -p mltl-parse --release` 4 tests pass.
+lockstep, D10). VERIFIED 2026-10-03: 142 items, 0 errors, nothing assumed;
+`cargo test -p mltl-parse --release`: 4 + 7 tests pass.
 
 ## Files
 - `lexer.rs`: `Token<N>` (N = `Vec<u8>` exec / `Seq<u8>` spec), spec
@@ -22,7 +22,24 @@ lockstep, D10). VERIFIED 2026-10-03: 139 items, 0 errors, nothing assumed;
   `number_injective`, `pn_kept`, `lemma_numbering_semantics`
   (`traces_agree` ⇒ same truth value).
 - `afp_binding.rs`: the 4 AFP binding examples, at token level.
-- `lib.rs`: `parse`, `parse_str`, `parse_numbered`.
+- `lib.rs`: `parse`, `parse_str`, `parse_numbered`, all returning
+  `Result<_, ParseError>` (D42).
+- Errors come from the verified code itself (owner, 2026-10-03: no second
+  parser). `lex(s, &mut spans, &mut bad)` also returns token spans
+  (`spans_ok`) or the bad piece; every `p_*` takes `fail: &mut Fail` and
+  ensures `r is None ==> fail_ok(*final(fail), len)`. Only fresh failure
+  sites write `fail` (`p_interval`, `p_atom`, `parse_tokens` leftovers); all
+  others pass it through, which is right because the parser never
+  backtracks past a failure. The soundness/completeness proofs were
+  untouched by this.
+- `error.rs`: `ParseError { kind, at: Span, related: Option<Span> }`,
+  `from_fail` (token index → byte span), `ensures error_ok` (in bounds).
+- `report.rs`: plain Rust outside `verus!` (not verified): message wording
+  and rustc-style layout. Re-runs the verified `lex` to see tokens around
+  the failure (glued `p0U[`, `U`/`R` and `->` chains via paren-depth scans,
+  unmatched `)`), and checks suggested fixes with `parse` before showing
+  them. Golden tests + 200k random texts in `tests/errors.rs`.
+  `examples/check.rs`: CLI.
 
 ## Proof patterns that worked
 - **Completeness of chain levels** (`&`, `^`, `|`): the grammar is left
@@ -54,4 +71,9 @@ lockstep, D10). VERIFIED 2026-10-03: 139 items, 0 errors, nothing assumed;
 - `parse_numbered`'s `None` is not fully characterised: besides "not a
   formula" and "pN too large", it may mean the numbers ran out (not provable
   impossible).
-- Error messages carry no position yet (parser returns `Option`).
+- Error positions are tested, not proved (owner chose this level,
+  2026-10-03). Possible later proof: the error token is the first one after
+  which the token prefix has no completion to a formula (viable-prefix
+  property); would need a spec of "prefix of some formula" and an ensures
+  on `fail` in each `p_*`.
+- Wording is expected to change as the owner uses it (D42).

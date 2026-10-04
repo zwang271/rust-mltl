@@ -20,6 +20,12 @@ a solver-scheduling attribute, not trust.
 (`parse_str` only). `#[verifier::spinoff_prover]` on `printer.rs :
 exec_raw_tokens` (scheduling, not trust).
 
+Unverified library code (presentation only, never called by verified code):
+`src/mltl-parse/src/report.rs` (outside `verus!`; words a `ParseError`
+and lays it out). It cannot change which texts are accepted or where the
+parser stopped; a bug there shows as a wrong or panicking message. Also
+`src/mltl-parse/examples/check.rs` (CLI).
+
 Unverified, non-library code: `src/mltl-eval/benchmarks/` (driver with an
 ad-hoc libmltl-syntax parser, Python scripts, C++ libmltl driver) and
 `src/mltl-eval/tests/eval_agree.rs` and `src/formula_progression/tests/progression.rs` (runtime tests; the latter has an unverified `complen` helper), `src/language_partitioning/tests/partition.rs` (runtime tests with unverified `show`/`wpd` helpers), and `src/formula_progression/benchmarks/` (drivers with ad-hoc parsers; the mimalloc allocator is linked only into the benchmark driver, never into the library).

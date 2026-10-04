@@ -4,7 +4,7 @@ What is currently decided, grouped by topic, with the reason. This is a
 register, not a log: when a decision changes, edit the entry; delete entries
 that no longer matter (git keeps the history). Each entry is a few lines:
 the decision, why, and what it means for future work. IDs are stable anchors
-for cross-references; give new entries the next free number (next: D41).
+for cross-references; give new entries the next free number (next: D43).
 
 ## Repository, docs and process
 
@@ -210,3 +210,13 @@ for cross-references; give new entries the next free number (next: D41).
   evaluator is designed but shelved by the owner. Everything needed to
   resume is in `project/m10-batched-eval.md`. On resume, offer an unverified
   prototype first, to measure before proving.
+- **D41 — Python bindings: wanted, deferred** (owner, 2026-10-03; answers
+  Q13). Python is to become an alternate interface to everything the
+  project provides (parser, evaluators, progression, partitioning, …), not
+  just the GA project's needs. Not now; design when the owner asks.
+- **D42 — Parser error positions are required** (owner, 2026-10-03:
+  "mandatory for a useful parser"; cargo's messages are the model). Done
+  2026-10-03: `parse` returns `Result<_, ParseError>`; first error only;
+  proved: an error means no formula, and every position is inside the
+  text; wording and position tested, not proved (owner chose "basic now,
+  location later"). Expect iteration driven by the owner's use.

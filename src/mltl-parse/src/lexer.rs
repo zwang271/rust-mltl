@@ -45,6 +45,23 @@ pub enum Token<N> {
 
 pub type SpecToken = Token<Seq<u8>>;
 
+/// The bytes `start..end` of a text. At the end of the text,
+/// `start == end == text.len()`.
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
+
+pub open spec fn span_ok(s: Span, n: nat) -> bool {
+    s.start <= s.end && s.end <= n
+}
+
+/// One span per token, each non-empty and inside a text of length `n`.
+pub open spec fn spans_ok(sp: Seq<Span>, count: nat, n: nat) -> bool {
+    &&& sp.len() == count
+    &&& forall|k: int| #![trigger sp[k]] 0 <= k < sp.len() ==> sp[k].start < sp[k].end && sp[k].end <= n
+}
+
 pub open spec fn token_view(t: Token<Vec<u8>>) -> SpecToken {
     match t {
         Token::Name(n) => Token::Name(n@),
@@ -266,7 +283,7 @@ proof fn lemma_split_step(s: Seq<u8>, prefix: Seq<SpecToken>, i: nat, t: SpecTok
     }
 }
 
-fn exec_keyword(s: &[u8], i: usize, j: usize) -> (r: Option<Token<Vec<u8>>>)
+pub fn exec_keyword(s: &[u8], i: usize, j: usize) -> (r: Option<Token<Vec<u8>>>)
     requires
         i < j <= s.len(),
     ensures
@@ -350,15 +367,40 @@ fn copy_bytes(s: &[u8], i: usize, j: usize) -> (r: Vec<u8>)
     r
 }
 
-/// The executable lexer: returns exactly `lex_spec(s)`.
-pub fn lex(s: &[u8]) -> (r: Option<Vec<Token<Vec<u8>>>>)
+/// Record the span `start..end` of the token just added; every earlier span
+/// ends at or before `before`.
+fn push_span(spans: &mut Vec<Span>, start: usize, end: usize, Ghost(before): Ghost<nat>)
+    requires
+        before <= start < end,
+        forall|k: int| #![trigger old(spans)@[k]] 0 <= k < old(spans)@.len()
+            ==> old(spans)@[k].start < old(spans)@[k].end && old(spans)@[k].end <= before,
+    ensures
+        final(spans)@.len() == old(spans)@.len() + 1,
+        forall|k: int| #![trigger final(spans)@[k]] 0 <= k < final(spans)@.len()
+            ==> final(spans)@[k].start < final(spans)@[k].end && final(spans)@[k].end <= end,
+{
+    let ghost old_sp = spans@;
+    spans.push(Span { start, end });
+    proof {
+        assert forall|k: int| #![trigger spans@[k]] 0 <= k < spans@.len()
+            implies spans@[k].start < spans@[k].end && spans@[k].end <= end by {
+            if k < old_sp.len() { assert(spans@[k] == old_sp[k]); }
+        }
+    }
+}
+
+/// The executable lexer: returns exactly `lex_spec(s)`. It also gives each
+/// token's position (`spans`), or on failure the position of the piece that
+/// is not a token (`fail`: an unknown character, or a number too large).
+pub fn lex(s: &[u8], spans: &mut Vec<Span>, fail: &mut Span) -> (r: Option<Vec<Token<Vec<u8>>>>)
     ensures
         match r {
-            Some(ts) => lex_spec(s@) == Some(tokens_view(ts@)),
-            None => lex_spec(s@) is None,
+            Some(ts) => lex_spec(s@) == Some(tokens_view(ts@)) && spans_ok(final(spans)@, ts.len() as nat, s.len() as nat),
+            None => lex_spec(s@) is None && span_ok(*final(fail), s.len() as nat),
         },
 {
     let n = s.len();
+    *spans = Vec::new();
     let mut out: Vec<Token<Vec<u8>>> = Vec::new();
     let mut i: usize = 0;
     proof { assert(tokens_view(out@) =~= Seq::<SpecToken>::empty()); }
@@ -366,9 +408,11 @@ pub fn lex(s: &[u8]) -> (r: Option<Vec<Token<Vec<u8>>>>)
         invariant
             i <= n, n == s.len(),
             lex_split(s@, tokens_view(out@), i as nat),
+            spans_ok(spans@, out@.len() as nat, i as nat),
         decreases n - i,
     {
         let c = s[i];
+        let start = i;
         let ghost before = tokens_view(out@);
         let ghost si = i as nat;
         if c == 32 || c == 9 || c == 10 || c == 13 {
@@ -396,6 +440,7 @@ pub fn lex(s: &[u8]) -> (r: Option<Vec<Token<Vec<u8>>>>)
             out.push(t);
             proof { assert(tokens_view(out@) =~= before + seq![token_view(t)]); }
             i = j;
+            push_span(spans, start, i, Ghost(si));
         } else if 48 <= c && c <= 57 {
             let mut j = i + 1;
             let mut v: usize = (c - 48) as usize;
@@ -439,6 +484,7 @@ pub fn lex(s: &[u8]) -> (r: Option<Vec<Token<Vec<u8>>>>)
             proof { assert(digits_end(s@, j as nat) == j as nat); }
             if overflow {
                 proof { assert(lex_from(s@, si) is None); }
+                *fail = Span { start: i, end: j };
                 return None;
             }
             proof {
@@ -448,6 +494,7 @@ pub fn lex(s: &[u8]) -> (r: Option<Vec<Token<Vec<u8>>>>)
             out.push(Token::Num(v));
             proof { assert(tokens_view(out@) =~= before + seq![Token::<Seq<u8>>::Num(v)]); }
             i = j;
+            push_span(spans, start, i, Ghost(si));
         } else if c == 45 && n - i > 1 && s[i + 1] == 62 {
             proof {
                 assert(lex_from(s@, si) == cons_opt(Token::Implies, lex_from(s@, si + 2)));
@@ -456,6 +503,7 @@ pub fn lex(s: &[u8]) -> (r: Option<Vec<Token<Vec<u8>>>>)
             out.push(Token::Implies);
             proof { assert(tokens_view(out@) =~= before + seq![Token::<Seq<u8>>::Implies]); }
             i = i + 2;
+            push_span(spans, start, i, Ghost(si));
         } else if c == 60 && n - i > 2 && s[i + 1] == 45 && s[i + 2] == 62 {
             proof {
                 assert(lex_from(s@, si) == cons_opt(Token::Iff, lex_from(s@, si + 3)));
@@ -464,6 +512,7 @@ pub fn lex(s: &[u8]) -> (r: Option<Vec<Token<Vec<u8>>>>)
             out.push(Token::Iff);
             proof { assert(tokens_view(out@) =~= before + seq![Token::<Seq<u8>>::Iff]); }
             i = i + 3;
+            push_span(spans, start, i, Ghost(si));
         } else {
             match exec_symbol(c) {
                 Some(t) => {
@@ -474,9 +523,11 @@ pub fn lex(s: &[u8]) -> (r: Option<Vec<Token<Vec<u8>>>>)
                     out.push(t);
                     proof { assert(tokens_view(out@) =~= before + seq![token_view(t)]); }
                     i = i + 1;
+                    push_span(spans, start, i, Ghost(si));
                 },
                 None => {
                     proof { assert(lex_from(s@, si) is None); }
+                    *fail = Span { start: i, end: i + 1 };
                     return None;
                 },
             }

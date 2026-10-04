@@ -32,7 +32,7 @@ rough cost. The owner decides; nothing here is planned until it moves to
 5. **The parser as the integration point for the search project.** The
    parser milestone is next anyway. If it also accepts libmltl's syntax, and
    Python bindings come with it, the verified evaluator becomes a drop-in
-   replacement for libmltl in the owner's GA code (open question Q13).
+   replacement for libmltl in the owner's GA code (Python bindings: D41, deferred).
    Cost: medium.
 6. **Watch: Verus solver brittleness.** Proofs have needed splitting and
    `spinoff_prover` as files grew. Keep proof files moderate in size, and

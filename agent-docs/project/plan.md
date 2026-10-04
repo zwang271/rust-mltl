@@ -28,7 +28,8 @@ M9 cross-cutting, alongside.   M10 fast evaluator: scalar part done, batching sh
 Crate `src/mltl-parse`; details `modules/mltl-parse.md`. Verified: lexer,
 grammar relations, parser sound + complete (hence unambiguous), printer
 with round trip, numbering (injective, `pN` kept, truth-preserving), AFP
-binding examples. Open: error positions,
+binding examples. Cargo-style error reports done (D42; iterate with the owner's use).
+Open:
 differential test against other parsers (the lark parser is no longer on
 this machine).
 

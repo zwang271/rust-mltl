@@ -16,6 +16,41 @@ verus! {
 pub type ExecFormula = Mltl<Vec<u8>>;
 pub type Parsed = Option<(ExecFormula, usize)>;
 
+/// What the parser expected where it stopped.
+pub enum Expected {
+    /// A formula: a name, `true`, `false`, `(`, `!`, `F` or `G`.
+    Formula,
+    /// The `[` of an interval.
+    IntervalOpen,
+    /// The first number of an interval.
+    IntervalLo,
+    /// The `,` of an interval.
+    IntervalComma,
+    /// The second number of an interval.
+    IntervalHi,
+    /// The `]` of an interval.
+    IntervalClose,
+    /// An interval `[a,b]` with `a ≤ b` (here `a > b`).
+    IntervalOrder,
+    /// The `)` closing the `(` at `related`.
+    CloseParen,
+    /// The end of the text, after a complete formula.
+    End,
+}
+
+/// Where and why the parser stopped: at token `at` (`ts.len()` for the end),
+/// expecting `expected`. `related` is the operator whose interval failed, or
+/// the `(` that is not closed; otherwise equal to `at`.
+pub struct Fail {
+    pub at: usize,
+    pub expected: Expected,
+    pub related: usize,
+}
+
+pub open spec fn fail_ok(e: Fail, len: nat) -> bool {
+    e.at <= len && e.related <= len
+}
+
 /// The specification formula denoted by an executable formula.
 pub open spec fn view_f(f: ExecFormula) -> SpecFormula
     decreases f,
@@ -84,36 +119,72 @@ pub fn clone_named(f: &ExecFormula) -> (r: ExecFormula)
     }
 }
 
-/// `interval` at token `k`: exactly the bounds of the interval there, if any.
-fn p_interval(ts: &Vec<Token<Vec<u8>>>, k: usize) -> (r: Option<(usize, usize)>)
+/// `interval` at token `k` (the operator is token `k - 1`): exactly the
+/// bounds of the interval there, if any.
+fn p_interval(ts: &Vec<Token<Vec<u8>>>, k: usize, fail: &mut Fail) -> (r: Option<(usize, usize)>)
+    requires
+        1 <= k <= ts.len(),
     ensures
         r is Some ==> interval(tokens_view(ts@), k as int, (r->Some_0).0, (r->Some_0).1),
         forall|a: usize, b: usize| #[trigger] interval(tokens_view(ts@), k as int, a, b) ==> r == Some((a, b)),
+        r is None ==> fail_ok(*final(fail), ts.len() as nat),
 {
     let ghost tv = tokens_view(ts@);
-    if k >= ts.len() || ts.len() - k < 5 {
+    let n = ts.len();
+    let op = k - 1;
+    proof {
+        assert forall|m: int| k <= m < n implies #[trigger] tv[m] == token_view(ts@[m]) by {}
+    }
+    if n - k < 1 || !matches!(ts[k], Token::LBrack) {
+        *fail = Fail { at: k, expected: Expected::IntervalOpen, related: op };
+        return None;
+    }
+    if n - k < 2 || !matches!(ts[k + 1], Token::Num(_)) {
+        *fail = Fail { at: k + 1, expected: Expected::IntervalLo, related: op };
+        return None;
+    }
+    if n - k < 3 || !matches!(ts[k + 2], Token::Comma) {
+        *fail = Fail { at: k + 2, expected: Expected::IntervalComma, related: op };
+        return None;
+    }
+    if n - k < 4 || !matches!(ts[k + 3], Token::Num(_)) {
+        *fail = Fail { at: k + 3, expected: Expected::IntervalHi, related: op };
+        return None;
+    }
+    if n - k < 5 || !matches!(ts[k + 4], Token::RBrack) {
+        *fail = Fail { at: k + 4, expected: Expected::IntervalClose, related: op };
         return None;
     }
     match (&ts[k], &ts[k + 1], &ts[k + 2], &ts[k + 3], &ts[k + 4]) {
         (Token::LBrack, Token::Num(a), Token::Comma, Token::Num(b), Token::RBrack) => {
-            if *a <= *b { Some((*a, *b)) } else { None }
+            if *a <= *b {
+                Some((*a, *b))
+            } else {
+                *fail = Fail { at: k + 1, expected: Expected::IntervalOrder, related: op };
+                None
+            }
         },
-        _ => None,
+        _ => {
+            *fail = Fail { at: k, expected: Expected::IntervalOpen, related: op };
+            None
+        },
     }
 }
 
 /// `atom` at token `i`.
-fn p_atom(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
+fn p_atom(ts: &Vec<Token<Vec<u8>>>, i: usize, fail: &mut Fail) -> (r: Parsed)
     requires
         i <= ts.len(),
     ensures
         advances(r, i as int, ts.len() as int),
+        r is None ==> fail_ok(*final(fail), ts.len() as nat),
         r is Some ==> atom(tokens_view(ts@), i as int, (r->Some_0).1 as int, view_f((r->Some_0).0)),
         forall|k: int, f: SpecFormula| #[trigger] atom(tokens_view(ts@), i as int, k, f) ==> returns(r, f, k),
     decreases ts.len() - i, 0nat,
 {
     let ghost tv = tokens_view(ts@);
     if i >= ts.len() {
+        *fail = Fail { at: i, expected: Expected::Formula, related: i };
         return None;
     }
     proof { assert(tv[i as int] == token_view(ts@[i as int])); }
@@ -122,7 +193,7 @@ fn p_atom(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
         Token::False => Some((Mltl::False, i + 1)),
         Token::Name(n) => Some((Mltl::Prop(copy_vec(n)), i + 1)),
         Token::LParen => {
-            let inner = p_formula(ts, i + 1);
+            let inner = p_formula(ts, i + 1, fail);
             match inner {
                 Some((g, j)) => {
                     if j < ts.len() && matches!(ts[j], Token::RParen) {
@@ -145,6 +216,7 @@ fn p_atom(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
                                 assert(stop_implication(tv, k - 1));
                             }
                         }
+                        *fail = Fail { at: j, expected: Expected::CloseParen, related: i };
                         None
                     }
                 },
@@ -160,16 +232,20 @@ fn p_atom(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
                 },
             }
         },
-        _ => None,
+        _ => {
+            *fail = Fail { at: i, expected: Expected::Formula, related: i };
+            None
+        },
     }
 }
 
 /// `unary` at token `i`.
-fn p_unary(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
+fn p_unary(ts: &Vec<Token<Vec<u8>>>, i: usize, fail: &mut Fail) -> (r: Parsed)
     requires
         i <= ts.len(),
     ensures
         advances(r, i as int, ts.len() as int),
+        r is None ==> fail_ok(*final(fail), ts.len() as nat),
         r is Some ==> unary(tokens_view(ts@), i as int, (r->Some_0).1 as int, view_f((r->Some_0).0)),
         forall|k: int, f: SpecFormula| #[trigger] unary(tokens_view(ts@), i as int, k, f) ==> returns(r, f, k),
     decreases ts.len() - i, 1nat,
@@ -179,7 +255,7 @@ fn p_unary(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
         proof { assert(tv[i as int] == token_view(ts@[i as int])); }
         match &ts[i] {
             Token::Not => {
-                let sub = p_unary(ts, i + 1);
+                let sub = p_unary(ts, i + 1, fail);
                 let r = match sub {
                     Some((g, j)) => Some((Mltl::Not(Box::new(g)), j)),
                     None => None,
@@ -195,10 +271,10 @@ fn p_unary(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
             },
             Token::KwF | Token::KwG => {
                 let is_f = matches!(ts[i], Token::KwF);
-                let iv = p_interval(ts, i + 1);
+                let iv = p_interval(ts, i + 1, fail);
                 let r = match iv {
                     Some((a, b)) => {
-                        let sub = p_unary(ts, i + 6);
+                        let sub = p_unary(ts, i + 6, fail);
                         match sub {
                             Some((g, j)) => {
                                 if is_f { Some((Mltl::Future(a, b, Box::new(g)), j)) }
@@ -227,7 +303,7 @@ fn p_unary(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
             _ => {},
         }
     }
-    let r = p_atom(ts, i);
+    let r = p_atom(ts, i, fail);
     proof {
         assert forall|k: int, f: SpecFormula| #[trigger] unary(tv, i as int, k, f)
             implies returns(r, f, k) by {
@@ -267,18 +343,19 @@ fn exec_iff(a: ExecFormula, b: ExecFormula) -> (r: ExecFormula)
 }
 
 /// `until_release` at token `i`.
-fn p_until_release(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
+fn p_until_release(ts: &Vec<Token<Vec<u8>>>, i: usize, fail: &mut Fail) -> (r: Parsed)
     requires
         i <= ts.len(),
     ensures
         advances(r, i as int, ts.len() as int),
+        r is None ==> fail_ok(*final(fail), ts.len() as nat),
         r is Some ==> until_release(tokens_view(ts@), i as int, (r->Some_0).1 as int, view_f((r->Some_0).0)),
         forall|k: int, f: SpecFormula| #[trigger] until_release(tokens_view(ts@), i as int, k, f)
             && stop_until_release(tokens_view(ts@), k) ==> returns(r, f, k),
     decreases ts.len() - i, 2nat,
 {
     let ghost tv = tokens_view(ts@);
-    let first = p_unary(ts, i);
+    let first = p_unary(ts, i, fail);
     match first {
         None => {
             proof {
@@ -303,10 +380,10 @@ fn p_until_release(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
             if j < ts.len() && (matches!(ts[j], Token::KwU) || matches!(ts[j], Token::KwR)) {
                 proof { assert(tv[j as int] == token_view(ts@[j as int])); }
                 let is_u = matches!(ts[j], Token::KwU);
-                let iv = p_interval(ts, j + 1);
+                let iv = p_interval(ts, j + 1, fail);
                 let r = match iv {
                     Some((a, b)) => {
-                        let sub = p_unary(ts, j + 6);
+                        let sub = p_unary(ts, j + 6, fail);
                         match sub {
                             Some((g2, k2)) => {
                                 let f = if is_u { Mltl::Until(Box::new(g1), a, b, Box::new(g2)) }
@@ -453,18 +530,19 @@ proof fn lemma_conjunction_spine_le(tv: Seq<SpecToken>, j: int, acc: SpecFormula
 }
 
 /// `conjunction` at token `i`.
-fn p_conjunction(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
+fn p_conjunction(ts: &Vec<Token<Vec<u8>>>, i: usize, fail: &mut Fail) -> (r: Parsed)
     requires
         i <= ts.len(),
     ensures
         advances(r, i as int, ts.len() as int),
+        r is None ==> fail_ok(*final(fail), ts.len() as nat),
         r is Some ==> conjunction(tokens_view(ts@), i as int, (r->Some_0).1 as int, view_f((r->Some_0).0)),
         forall|k: int, f: SpecFormula| #[trigger] conjunction(tokens_view(ts@), i as int, k, f)
             && stop_conjunction(tokens_view(ts@), k) ==> returns(r, f, k),
     decreases ts.len() - i, 3nat,
 {
     let ghost tv = tokens_view(ts@);
-    let first = p_until_release(ts, i);
+    let first = p_until_release(ts, i, fail);
     match first {
         None => {
             proof {
@@ -496,7 +574,7 @@ fn p_conjunction(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
                 decreases ts.len() - pos,
             {
                 proof { assert(tv[pos as int] == token_view(ts@[pos as int])); }
-                let next = p_until_release(ts, pos + 1);
+                let next = p_until_release(ts, pos + 1, fail);
                 match next {
                     None => {
                         proof {
@@ -629,18 +707,19 @@ proof fn lemma_exclusive_or_spine_le(tv: Seq<SpecToken>, j: int, acc: SpecFormul
 }
 
 /// `exclusive_or` at token `i`.
-fn p_exclusive_or(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
+fn p_exclusive_or(ts: &Vec<Token<Vec<u8>>>, i: usize, fail: &mut Fail) -> (r: Parsed)
     requires
         i <= ts.len(),
     ensures
         advances(r, i as int, ts.len() as int),
+        r is None ==> fail_ok(*final(fail), ts.len() as nat),
         r is Some ==> exclusive_or(tokens_view(ts@), i as int, (r->Some_0).1 as int, view_f((r->Some_0).0)),
         forall|k: int, f: SpecFormula| #[trigger] exclusive_or(tokens_view(ts@), i as int, k, f)
             && stop_exclusive_or(tokens_view(ts@), k) ==> returns(r, f, k),
     decreases ts.len() - i, 4nat,
 {
     let ghost tv = tokens_view(ts@);
-    let first = p_conjunction(ts, i);
+    let first = p_conjunction(ts, i, fail);
     match first {
         None => {
             proof {
@@ -672,7 +751,7 @@ fn p_exclusive_or(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
                 decreases ts.len() - pos,
             {
                 proof { assert(tv[pos as int] == token_view(ts@[pos as int])); }
-                let next = p_conjunction(ts, pos + 1);
+                let next = p_conjunction(ts, pos + 1, fail);
                 match next {
                     None => {
                         proof {
@@ -805,18 +884,19 @@ proof fn lemma_disjunction_spine_le(tv: Seq<SpecToken>, j: int, acc: SpecFormula
 }
 
 /// `disjunction` at token `i`.
-fn p_disjunction(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
+fn p_disjunction(ts: &Vec<Token<Vec<u8>>>, i: usize, fail: &mut Fail) -> (r: Parsed)
     requires
         i <= ts.len(),
     ensures
         advances(r, i as int, ts.len() as int),
+        r is None ==> fail_ok(*final(fail), ts.len() as nat),
         r is Some ==> disjunction(tokens_view(ts@), i as int, (r->Some_0).1 as int, view_f((r->Some_0).0)),
         forall|k: int, f: SpecFormula| #[trigger] disjunction(tokens_view(ts@), i as int, k, f)
             && stop_disjunction(tokens_view(ts@), k) ==> returns(r, f, k),
     decreases ts.len() - i, 5nat,
 {
     let ghost tv = tokens_view(ts@);
-    let first = p_exclusive_or(ts, i);
+    let first = p_exclusive_or(ts, i, fail);
     match first {
         None => {
             proof {
@@ -848,7 +928,7 @@ fn p_disjunction(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
                 decreases ts.len() - pos,
             {
                 proof { assert(tv[pos as int] == token_view(ts@[pos as int])); }
-                let next = p_exclusive_or(ts, pos + 1);
+                let next = p_exclusive_or(ts, pos + 1, fail);
                 match next {
                     None => {
                         proof {
@@ -910,11 +990,12 @@ fn p_disjunction(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
 }
 
 /// `implication` at token `i`.
-fn p_implication(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
+fn p_implication(ts: &Vec<Token<Vec<u8>>>, i: usize, fail: &mut Fail) -> (r: Parsed)
     requires
         i <= ts.len(),
     ensures
         advances(r, i as int, ts.len() as int),
+        r is None ==> fail_ok(*final(fail), ts.len() as nat),
         r is Some ==> implication(tokens_view(ts@), i as int, (r->Some_0).1 as int, view_f((r->Some_0).0)),
         forall|k: int, f: SpecFormula| #[trigger] implication(tokens_view(ts@), i as int, k, f)
             && stop_implication(tokens_view(ts@), k) ==> returns(r, f, k),
@@ -922,7 +1003,7 @@ fn p_implication(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
 {
     reveal_with_fuel(view_f, 3);
     let ghost tv = tokens_view(ts@);
-    let first = p_disjunction(ts, i);
+    let first = p_disjunction(ts, i, fail);
     match first {
         None => {
             proof {
@@ -951,7 +1032,7 @@ fn p_implication(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
             if j < ts.len() && (matches!(ts[j], Token::Implies) || matches!(ts[j], Token::Iff)) {
                 proof { assert(tv[j as int] == token_view(ts@[j as int])); }
                 let is_imp = matches!(ts[j], Token::Implies);
-                let sub = p_disjunction(ts, j + 1);
+                let sub = p_disjunction(ts, j + 1, fail);
                 let r = match sub {
                     Some((g2, k2)) => {
                         let f = if is_imp { Mltl::Or(Box::new(Mltl::Not(Box::new(g1))), Box::new(g2)) }
@@ -1033,17 +1114,18 @@ fn p_implication(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
 }
 
 /// `formula` at token `i`.
-fn p_formula(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
+fn p_formula(ts: &Vec<Token<Vec<u8>>>, i: usize, fail: &mut Fail) -> (r: Parsed)
     requires
         i <= ts.len(),
     ensures
         advances(r, i as int, ts.len() as int),
+        r is None ==> fail_ok(*final(fail), ts.len() as nat),
         r is Some ==> formula(tokens_view(ts@), i as int, (r->Some_0).1 as int, view_f((r->Some_0).0)),
         forall|k: int, f: SpecFormula| #[trigger] formula(tokens_view(ts@), i as int, k, f)
             && stop_implication(tokens_view(ts@), k) ==> returns(r, f, k),
     decreases ts.len() - i, 7nat,
 {
-    let r = p_implication(ts, i);
+    let r = p_implication(ts, i, fail);
     proof {
         let tv = tokens_view(ts@);
         assert forall|k: int, f: SpecFormula| #[trigger] formula(tv, i as int, k, f)
@@ -1055,14 +1137,15 @@ fn p_formula(ts: &Vec<Token<Vec<u8>>>, i: usize) -> (r: Parsed)
 }
 
 /// The whole token sequence as one formula: the unique formula it denotes,
-/// or `None` if there is none.
-pub fn parse_tokens(ts: &Vec<Token<Vec<u8>>>) -> (r: Option<ExecFormula>)
+/// or `None` if there is none (then `fail` says where the parser stopped).
+pub fn parse_tokens(ts: &Vec<Token<Vec<u8>>>, fail: &mut Fail) -> (r: Option<ExecFormula>)
     ensures
+        r is None ==> fail_ok(*final(fail), ts.len() as nat),
         r is Some ==> formula(tokens_view(ts@), 0, ts.len() as int, view_f(r->Some_0)),
         forall|f: SpecFormula| #[trigger] formula(tokens_view(ts@), 0, ts.len() as int, f)
             ==> r is Some && view_f(r->Some_0) == f,
 {
-    let res = p_formula(ts, 0);
+    let res = p_formula(ts, 0, fail);
     let ghost tv = tokens_view(ts@);
     match res {
         Some((f, j)) => {
@@ -1074,6 +1157,7 @@ pub fn parse_tokens(ts: &Vec<Token<Vec<u8>>>) -> (r: Option<ExecFormula>)
                         assert(stop_implication(tv, ts.len() as int));
                     }
                 }
+                *fail = Fail { at: j, expected: Expected::End, related: j };
                 None
             }
         },
