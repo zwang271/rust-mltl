@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["src/mltl-core", "src/mltl-eval", "src/formula_progression"]
+members = ["src/mltl-core", "src/mltl-eval", "src/formula_progression", "src/mltl-parse"]
 
 [workspace.package]
 edition = "2021"

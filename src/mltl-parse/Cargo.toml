@@ -1,0 +1,15 @@
+[package]
+name = "mltl-parse"
+version.workspace = true
+edition.workspace = true
+description = "Verified parser and printer for MLTL formulas (spec: GRAMMAR.md)"
+
+[dependencies]
+vstd.workspace = true
+mltl-core = { path = "../mltl-core" }
+
+[package.metadata.verus]
+verify = true
+
+[lints]
+workspace = true
