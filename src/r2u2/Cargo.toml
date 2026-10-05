@@ -1,0 +1,15 @@
+[package]
+name = "r2u2"
+version.workspace = true
+edition.workspace = true
+description = "A verified R2U2 runtime monitor for MLTL"
+
+[dependencies]
+vstd.workspace = true
+mltl-core = { path = "../mltl-core" }
+
+[package.metadata.verus]
+verify = true
+
+[lints]
+workspace = true
