@@ -147,6 +147,7 @@ name = "r2u2"
 version = "0.1.0"
 dependencies = [
  "mltl-core",
+ "mltl-eval",
  "vstd",
 ]
 

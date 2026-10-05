@@ -13,3 +13,6 @@ verify = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+mltl-eval = { path = "../mltl-eval" }
