@@ -27,8 +27,9 @@ runnable code has meant:
    algorithm verified in this repo against MLTL semantics (the open
    research question); then, along a recorded path, R2U2's memory bounds
    and the actual `r2u2_core` Rust source in place.
-4. **Verify WEST in place**: the owner's existing public Rust WEST
-   implementation (https://github.com/zwang271/WEST; D9).
+4. **WEST, verified** (changed 2026-10-03, D43): port AFP WEST afresh
+   (faithful + fast packed-bit version) instead of verifying the owner's
+   upstream Rust in place (https://github.com/zwang271/WEST, left as is).
 5. **Port + verify** formula progression and language partitioning in Rust
    (no existing Rust implementation assumed).
 6. **Eliminate the untrusted parsing step**: a verified parser (and ideally a

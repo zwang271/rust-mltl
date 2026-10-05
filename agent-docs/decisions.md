@@ -53,7 +53,6 @@ for cross-references; give new entries the next free number (next: D50).
   only. Never use IDs or agent-docs terms when talking to the owner or in
   human docs. Housekeeping runs on a fixed cadence (see `INDEX.md`
   "Housekeeping").
-
 ## Scope and order
 
 - **D9 — Toolchain and in-place verification.** Latest Verus release for this
@@ -158,6 +157,19 @@ for cross-references; give new entries the next free number (next: D50).
   fast = slow, encoding-length theorems later. The LRAT checker has no
   Isabelle source, so it has no `_spec` twin (D20): its `ensures` states
   soundness directly.
+
+- **D43 — WEST is ported afresh, not verified in place** (owner,
+  2026-10-03; supersedes the WEST half of D9 and goal 4's "in place").
+  Upstream `west_rust` diverges from AFP in ways that make in-place proof a
+  rewrite (`project/sources.md`, WEST section). Crate `src/west`: spec port
+  of `WEST_Algorithms` + `WEST_correct`, a faithful exec `WEST_reg` equal
+  to the spec, then a fast packed-bit version proved only *equivalent*
+  (same matching traces; owner: "don't need AFP's output"). Upstream WEST
+  repo stays as is; Q10 no longer blocks WEST.
+- **D44 — Deployed tools move to this repo's crates** (owner, 2026-10-03).
+  Everything deployed at mltl.temporallogic.org (incl. the WEST website)
+  will switch to crates here. Implication: crates need stable entry points
+  and output formats a front end (likely WASM) can call; design when asked.
 
 ## Semantics and representation
 

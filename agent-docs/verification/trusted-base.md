@@ -18,6 +18,13 @@ plus `group_hash_axioms`: `usize` obeys the key model, default hasher is
 valid). `#[verifier::spinoff_prover]` on two proofs in `properties.rs` is
 a solver-scheduling attribute, not trust.
 
+`west` (2026-10-04): no `assume`/`admit`/`external*`. Relies on vstd's
+`Vec` specs (`push`, `pop`, `set`, `append`, `remove`, `with_capacity`) and
+the `bit_vector` solver (`bits.rs`); `WestBit`'s derived `Clone/Copy/
+PartialEq` are never used in proofs (exec compares by `match`). Unverified
+test/benchmark-only code: `src/west/tests/*.rs` reference matchers,
+`benchmarks/{driver.rs, proto*.rs, upstream_*}`, `differential/` drivers.
+
 `r2u2` (2026-10-04): no `assume`/`admit`/`external*`/`uninterp`. The exec
 part (`exec.rs`, `exec_engine.rs`) relies on vstd's `Vec` specs and, for
 trace states, `HashSet::contains` + `group_hash_axioms` (as mltl-eval).

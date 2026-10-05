@@ -189,6 +189,47 @@ semantics diverge.
   2048), `R2U2_MAX_TL_INSTRUCTIONS` (256), etc., overridable by env vars at
   compile time.
 
-## Not available locally
-- **WEST Rust implementation** — https://github.com/zwang271/WEST (owner's
-  public repo; D9). To be brought in as a fork submodule under `vendor/`.
+## WEST upstream — https://github.com/zwang271/WEST (not in the repo)
+Surveyed 2026-10-03 at `21cd99a` (2026-04-05) from a throwaway clone; not a
+submodule. Owner's repo. Contents:
+- `src/WEST/` C++ (string states), `src/WEST/bitoptimized/` C++ with
+  `bitset<1024>`; `src/west_rust/` Rust (~1.7k lines of logic + CLI/WASM),
+  "verified against C++ and Isabelle" = differential tests
+  (`experiments/verification/verify_rust_isabelle.py`, lark parser).
+- `experiments/verification/isabelle_verification/haskell/`: Isabelle
+  Haskell export `run_west` (WEST_reg) and `check_equiv`
+  (Regex_Equivalence), built by `setup_verification.sh`. Usable as a
+  differential oracle (GHC is installed here).
+- `west_rust` design: own `MLTL<String>` (+ `Implies`), nom parser, crate
+  `bitvec`. A trace regex is one bit vector of fixed length
+  `2·num_vars·complen` (11 = S, 10 = One, 01 = Zero, 00 = contradiction);
+  word-level tricks for null check, AND, and "differs in ≤ 1 variable"
+  (xor popcount ≤ 1, or 2 forming an aligned pair).
+- **Divergences from AFP `WEST_Algorithms`** (checked by reading code):
+  1. Atoms are renumbered: names sorted as *strings*, then 0,1,… (`G[0,1] p3`
+     prints one column; `p10` sorts before `p2`). AFP uses the atom number
+     itself, `WEST_num_vars` = max + 1.
+  2. Every trace regex is padded to `complen`; AFP regexes have varying
+     length, and `check_simp` never merges two of different length.
+  3. Simp merges into slot i and `swap_remove`s j; AFP removes both and
+     appends the merge, then restarts `enum_pairs`. Simp is greedy, so the
+     resulting lists differ (the language is the same).
+  4. F/G fold from `a` upward, U/R build each disjunct non-recursively;
+     AFP recurses from `b` down. Same language, different lists.
+  5. `G[a,b]` with `a > b` gives "all" (AFP: `[]`); unreachable via its parser.
+  So its output can't be proved equal to `WEST_reg`, only equivalent;
+  `bitvec` is opaque to Verus. In-place verification would mean rewriting.
+- **BUG (upstream `west_rust`, found 2026-10-04): drops satisfying traces.**
+  `src/regex.rs` checks for contradictions word by word with
+  `word | (word >> 1)`, but with `bitvec`'s `Msb0` order a variable's pair
+  sits at word bits (63-2k, 62-2k), so this ORs each pair's high bit with
+  the previous pair's low bit (fix: `word << 1`). Only full 64-bit words
+  take that path (`is_null`, `and_if_not_null`), so formulas with
+  `2·n·complen < 64` are unaffected, which is why upstream's tests pass.
+  Minimal: `G[0,15] (p0 & !p1)` → upstream Rust 0 regexes, upstream C++ 1,
+  ours 1 (`G[0,14] …`: all 1). On upstream's `d/6.txt` several formulas
+  get 0 regexes from upstream Rust. Owner's call whether to fix upstream.
+- Benchmark inputs: upstream `experiments/benchmarking/{d,n,m}/*.txt`
+  (250 formulas each; vary depth / atoms / max bound). Upstream's
+  `src/WEST/Makefile` builds the C++ without `-O`; our harness uses `-O2`.
+  C++ `bin/west` crashes on macOS after printing (`/proc/self/exe`).

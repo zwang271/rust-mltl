@@ -223,6 +223,27 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
   bind `let nx: i32 = -x;` in exec and use `nx` (`mltl-sat/src/encode.rs`).
 - `slice::reverse` has no vstd spec; iterate by index instead.
 
+- **Arithmetic in triggers doesn't fire on constants** (WEST, 2026-10-04):
+  `forall|p| p < 32 ==> #[trigger] bit(z, 2 * p) || ..` never instantiated
+  for `assert(bit(z, 0) || bit(z, 1))`. Name the body
+  (`pair_ok(z, p)`) and trigger on that; then `assert(pair_ok(z, 0))` works.
+- **`nonlinear_arith` sees only its `requires`**: facts like `s == 2*n*k`
+  from `let` bindings must be passed in `requires`, and spec fns (e.g.
+  `fits`) must be written out, or the query fails.
+- **Exec `e - 1` vs bit-vector `sub(e, 1u64)`**: equal when `e != 0`, but
+  needs `assert(x == e & sub(e, 1u64)) by (bit_vector) requires e != 0u64,
+  x == e & ((e - 1) as u64)`.
+- **Facts before a loop are gone inside it**: a `proof { lemma(..) }` before
+  a `while` did not help an early `return` inside the loop; call the lemma
+  at the return (WEST `WEST_and_state`).
+- **A shadowed, moved parameter in `ensures`**: `fn f(l: T) ensures ..l..
+  { let mut l = l; loop {..} }` failed at the return; rename the parameter
+  (`input`) and keep `ghost l0 == view(input)` plus `target == spec(l0)` in
+  the invariant.
+- **Quantified-ensures lemmas over arithmetic index terms**: a lemma
+  ensuring `forall a, b. P[off(a) + (b - a - 1)] == (a, b)` was
+  unusable/unprovable; the same lemma with `a, b` as parameters worked.
+
 ## Spikes
 - `spikes/m1-semantics-spike.rs` (T1.4, 2026-10-02, VERIFIED: 14 verified,
   0 errors; not part of the build). Contains: generic `Formula<A>` enum with
@@ -248,3 +269,4 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
 - `nat % int` does not type-check: write `x as int % (n as int)`.
 - Named imports of spec fns (`use m::f;`) break the plain `cargo build`
   (spec fns are erased); use glob imports.
+

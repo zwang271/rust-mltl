@@ -7,7 +7,7 @@ Order and reasons: D12.
 
 ```
 M1 toolchain ─> M2 mltl-core ─┬─> M4 progression (done) ─> M3 parser, M5 lang-partition (done) ─> M7 SAT
-                               ├─(fork URLs)─> M6 WEST in place
+                               ├─> M6 WEST port (D43)
                                └─> M8 R2U2 (idealized first, D48)
 M9 cross-cutting, alongside.   M10 fast evaluator: scalar part done, batching shelved.
 ```
@@ -47,23 +47,15 @@ Left over:
 - Possible (owner's call): ownership passing in exec (D36) to cut copies;
   a benchmark (no Haskell comparison, D40).
 
-## M6 — WEST in place (goal 4)
-Upstream https://github.com/zwang271/WEST; blocked by Q10 (fork). Source: AFP `WEST_Algorithms.thy` (744),
-`WEST_Proofs.thy` (6024), `Regex_Equivalence.thy` (1202).
-- T6.1 (M) Add the fork as submodule `vendor/WEST` (D9); build it; survey its structure and map
-  each Rust fn to its `WEST_Algorithms` counterpart (or note divergence) in
-  `correspondence/west.md`. Note any input parser it has (goal 6 overlap).
-- T6.2 (M) Spec layer: Verus spec fns mirroring `WEST_Algorithms` (`WEST_bit`,
-  `match_timestep`, `match_regex`, `match`, `WEST_and*`, `WEST_simp*`,
-  `shift`, `pad`, `WEST_global/future/until/release`, `WEST_reg_aux`,
-  `WEST_reg`).
-- T6.3 (L) Refinement proofs bottom-up: bitwise → state → trace → regex →
-  simp → temporal ops → `WEST_reg`. Minimal, behavior-preserving source edits;
-  log every edit.
-- T6.4 (XL) Port the `WEST_Proofs` main correctness theorem (`WEST_reg`
-  matches exactly the traces satisfying the formula) against core semantics.
-- T6.5 (M, optional) `Regex_Equivalence`.
-- Exit: real WEST code `VERIFIED` correct w.r.t. `semantics_mltl`.
+## M6 — WEST port (goal 4, D43) — done 2026-10-04
+Crate `src/west`; details `modules/west.md`, `correspondence/west.md`.
+Done: spec of `WEST_Algorithms`, `WEST_correct(_v2/_pad)`, faithful exec
+(= spec; differential test vs the Isabelle export), fast packed exec proved
+equivalent (`fast_reg`, `fast_reg_checked`, text output), benchmarks vs
+upstream Rust/C++. Left over:
+- T6.5 (optional) `Regex_Equivalence.thy`.
+- T6.6 Website/CLI entry for mltl.temporallogic.org (D44), when asked.
+- Possible: faster simplification (hashing), subsumption.
 
 ## M7 — MLTL SAT solver
 Source: `REU/isabelle/` (D18). Approach D45, crates D46; details `m7-sat.md`,
