@@ -17,6 +17,10 @@ pub enum ErrorKind {
     /// `parse_numbered` only: a `pN` with N ≥ usize::MAX, or more names than
     /// numbers.
     NumberingFailed,
+    /// [`crate::atoms::Atoms`] only: a `pN` atom whose number N may already
+    /// belong to a name of the table (N is at or above the first number
+    /// given to a name).
+    NumberTaken,
 }
 
 /// A text that is not a formula: what went wrong, where (`at`), and the

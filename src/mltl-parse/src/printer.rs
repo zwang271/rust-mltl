@@ -415,7 +415,7 @@ pub proof fn lemma_digits(v: nat)
 }
 
 /// The lexer's value of the digits of `v`, wherever they appear, is `v`.
-proof fn lemma_digits_value(s: Seq<u8>, i: nat, v: nat)
+pub(crate) proof fn lemma_digits_value(s: Seq<u8>, i: nat, v: nat)
     requires
         i + digits(v).len() <= s.len(),
         s.subrange(i as int, (i + digits(v).len()) as int) == digits(v),
@@ -768,7 +768,7 @@ fn exec_raw_tokens(f: &ExecFormula, out: &mut Vec<Token<Vec<u8>>>)
 }
 
 /// Appends the decimal digits of `v`.
-fn push_digits(v: usize, out: &mut Vec<u8>)
+pub(crate) fn push_digits(v: usize, out: &mut Vec<u8>)
     ensures
         final(out)@ == old(out)@ + digits(v as nat),
     decreases v,

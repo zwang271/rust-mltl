@@ -305,6 +305,12 @@ impl ParseError {
                 d.title = "atom numbers ran out".to_string();
                 d.notes.push("note: a `pN` atom has N ≥ usize::MAX, or there are more names than numbers".to_string());
             }
+            ErrorKind::NumberTaken => {
+                d.title = "a `pN` atom may clash with a named atom".to_string();
+                d.notes.push("note: in this table, numbers from the first named atom on belong to names, \
+                    so a later `pN` must have a smaller N".to_string());
+                d.notes.push("help: use only names, or parse the formula with the largest `pN` first".to_string());
+            }
             ErrorKind::Expected(e) => {
                 let t = Tokens::new(src);
                 let k = t.index(at.start);
@@ -408,6 +414,7 @@ impl fmt::Debug for ParseError {
             ErrorKind::UnknownChar => "UnknownChar",
             ErrorKind::NumberTooLarge => "NumberTooLarge",
             ErrorKind::NumberingFailed => "NumberingFailed",
+            ErrorKind::NumberTaken => "NumberTaken",
             ErrorKind::Expected(e) => match e {
                 Expected::Formula => "Expected(Formula)",
                 Expected::IntervalOpen => "Expected(IntervalOpen)",

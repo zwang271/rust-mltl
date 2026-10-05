@@ -4,6 +4,38 @@
 //! in [`grammar`] (tokens: [`lexer`]). [`parse`] is proved to return exactly
 //! the formula the grammar assigns to the text, and to fail only when the
 //! text is not a formula.
+//!
+//! # Example
+//!
+//! [`Atoms`] numbers the atoms of several formulas consistently (what the
+//! evaluators and other algorithms take) and prints numbered results back
+//! with their names:
+//!
+//! ```
+//! use mltl_parse::Atoms;
+//!
+//! let mut atoms = Atoms::new();
+//! let f = atoms.parse(b"G[0,10] (request -> F[0,5] grant)").unwrap();
+//! let g = atoms.parse(b"grant & !request").unwrap();
+//! assert_eq!(atoms.atom(&b"request".to_vec()), Some(0));
+//! assert_eq!(atoms.atom(&b"grant".to_vec()), Some(1));
+//!
+//! // `->` is stored as `!a | b`; printing uses as few parentheses as possible.
+//! assert_eq!(atoms.print(&f), b"G[0,10] (!request | F[0,5] grant)");
+//! assert_eq!(atoms.print(&g), b"grant & !request");
+//!
+//! // Numbers without a name print as `pN`.
+//! assert_eq!(atoms.print(&mltl_core::mltl::Mltl::Prop(7)), b"p7");
+//! ```
+//!
+//! For one-off use, [`parse_str`] returns the formula with names as atoms,
+//! and [`printer::print`] prints it. Errors render like cargo's:
+//!
+//! ```
+//! let text = "G[0,10] (request -> F[5,0] grant)";
+//! let e = mltl_parse::parse_str(text).unwrap_err();
+//! println!("{}", e.render(text.as_bytes(), "<input>"));
+//! ```
 pub mod lexer;
 pub mod grammar;
 pub mod parser;
@@ -12,6 +44,7 @@ pub mod numbering;
 pub mod afp_binding;
 pub mod error;
 pub mod report;
+pub mod atoms;
 
 use vstd::prelude::*;
 use vstd::string::StringSliceAdditionalSpecFns;
@@ -26,6 +59,7 @@ pub use crate::parser::ExecFormula;
 pub use crate::error::{ErrorKind, ParseError};
 pub use crate::lexer::Span;
 pub use crate::parser::Expected;
+pub use crate::atoms::Atoms;
 
 verus! {
 

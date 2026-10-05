@@ -225,7 +225,7 @@ proof fn lemma_digits_canonical(s: Seq<u8>, i: nat, j: nat)
 }
 
 /// `pnum` identifies the name: two names with the same `pN` value are equal.
-proof fn lemma_pnum_injective(n1: Seq<u8>, n2: Seq<u8>)
+pub(crate) proof fn lemma_pnum_injective(n1: Seq<u8>, n2: Seq<u8>)
     requires
         pnum(n1) is Some,
         pnum(n1) == pnum(n2),
@@ -237,7 +237,7 @@ proof fn lemma_pnum_injective(n1: Seq<u8>, n2: Seq<u8>)
 }
 
 /// Whether `n` is a `pN` name, and its value N; `overflow` if N > usize::MAX.
-fn exec_pnum(n: &Vec<u8>) -> (r: (bool, bool, usize))
+pub(crate) fn exec_pnum(n: &Vec<u8>) -> (r: (bool, bool, usize))
     ensures
         !r.0 ==> pnum(n@) is None,
         r.0 && !r.1 ==> pnum(n@) == Some(r.2 as nat),
@@ -336,7 +336,7 @@ pub open spec fn pn_too_large(f: SpecFormula) -> bool {
 }
 
 /// `Ok(m)`: every `pN` atom has N below `m` (0 if there are none).
-fn pn_bound(f: &ExecFormula) -> (r: Result<usize, ()>)
+pub(crate) fn pn_bound(f: &ExecFormula) -> (r: Result<usize, ()>)
     ensures
         r is Ok ==> pn_below(view_f(*f), (r->Ok_0) as nat),
         r is Err ==> pn_too_large(view_f(*f)),
@@ -431,7 +431,7 @@ pub open spec fn resolved(f: SpecFormula, t: SpecTable) -> bool {
     forall|n: Seq<u8>| #[trigger] atoms_mltl(f).contains(n) && pnum(n) is None ==> lookup(t, n) is Some
 }
 
-proof fn lemma_lookup_at(t: SpecTable, lo: nat, next: nat, j: int)
+pub(crate) proof fn lemma_lookup_at(t: SpecTable, lo: nat, next: nat, j: int)
     requires
         table_ok(t, lo, next),
         0 <= j < t.len(),
@@ -447,7 +447,7 @@ proof fn lemma_lookup_at(t: SpecTable, lo: nat, next: nat, j: int)
     }
 }
 
-proof fn lemma_lookup_extends(t1: SpecTable, t2: SpecTable, lo: nat, next: nat, n: Seq<u8>)
+pub(crate) proof fn lemma_lookup_extends(t1: SpecTable, t2: SpecTable, lo: nat, next: nat, n: Seq<u8>)
     requires
         table_ok(t2, lo, next),
         extends(t1, t2),
@@ -511,7 +511,7 @@ proof fn lemma_numbers_stable(f: SpecFormula, t1: SpecTable, t2: SpecTable, lo: 
     }
 }
 
-fn eq_bytes(a: &Vec<u8>, b: &Vec<u8>) -> (r: bool)
+pub(crate) fn eq_bytes(a: &Vec<u8>, b: &Vec<u8>) -> (r: bool)
     ensures
         r == (a@ == b@),
 {
@@ -535,7 +535,7 @@ fn eq_bytes(a: &Vec<u8>, b: &Vec<u8>) -> (r: bool)
 }
 
 /// The number of `n` in the table, if it has one.
-fn find(t: &Vec<(Vec<u8>, usize)>, n: &Vec<u8>, Ghost(lo): Ghost<nat>, Ghost(next): Ghost<nat>) -> (r: Option<usize>)
+pub(crate) fn find(t: &Vec<(Vec<u8>, usize)>, n: &Vec<u8>, Ghost(lo): Ghost<nat>, Ghost(next): Ghost<nat>) -> (r: Option<usize>)
     requires
         table_ok(table_view(t@), lo, next),
     ensures
@@ -560,7 +560,7 @@ fn find(t: &Vec<(Vec<u8>, usize)>, n: &Vec<u8>, Ghost(lo): Ghost<nat>, Ghost(nex
 }
 
 /// Assigns numbers to `f`'s atoms, extending the table.
-fn assign(f: &ExecFormula, t: &mut Vec<(Vec<u8>, usize)>, next: &mut usize, Ghost(lo): Ghost<nat>)
+pub(crate) fn assign(f: &ExecFormula, t: &mut Vec<(Vec<u8>, usize)>, next: &mut usize, Ghost(lo): Ghost<nat>)
     -> (r: Option<Mltl<usize>>)
     requires
         table_ok(table_view(old(t)@), lo, *old(next) as nat),
