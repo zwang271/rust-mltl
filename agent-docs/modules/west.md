@@ -33,7 +33,8 @@ trusted.
   overall; merge = OR.
 - Simplification merges any mergeable pair (in place, swap-remove) and
   repeats until a pass merges nothing; it does not restart after each merge
-  (AFP does). Output differs from Isabelle's list; equivalence only (D43).
+  (AFP and upstream do). Output differs from Isabelle's list; equivalence
+  only (D43). **This is the main reason for the speed gap** (ablation below).
 - Guarantee shape: `∀π. len π ≥ complen φ ⟹ (match π out ⟷ π ⊨ φ)`, built
   per operator: e.g. `p_until` gives `until_shifted` for `π ≥ b + max(len φ-1, len ψ)`,
   then `until_sem` turns it into semantics with the induction hypothesis.
@@ -45,6 +46,27 @@ trusted.
   chosen because proofs need no `i·w` index arithmetic.
 - Verified `fast` ≈ unverified prototype (`benchmarks/proto.rs`): hard d=3
   0.023 vs 0.023 s, d=4 0.214 vs 0.221 s (2026-10-04). No proof tax.
+
+## Why fast beats upstream (ablation, 2026-10-04)
+Measured, not argued: `benchmarks/ablation/` has copies of `proto.rs`
+changing one design choice each to upstream's; driver impls
+`proto_restart`, `proto_quad`, `proto_toplen`; all checked exhaustively in
+`tests/proto.rs`. Hard sets, 30 formulas × 15 files, 10 s limit:
+- `restart` (rescan from the first pair after every merge, as AFP and both
+  upstream versions): finishes 383/450 vs 397; on the 383 both finish 1.40 s
+  → 30.3 s total (×22), ×1.46 geometric mean, worst ×692 (hard n=5 #5,
+  5 ms → 3.4 s). Cost is n² per merge, so cubic in list size.
+- `quad` (U/R rebuild `G[a,k]` each step, as upstream): 396/450, ×1.3 total,
+  ×1.07 geo-mean. Small, only on heavy formulas.
+- `toplen` (full-formula length from the leaves, as upstream): ×1.0.
+- Output size is not the reason: fast and upstream C++ give the same count
+  on 300/349 common formulas. Restart vs ours: fewer regexes on 14, more on
+  16, same on 353 — neither order is better in general.
+- Correction of an earlier claim (made to the owner from a 20-formula
+  sample, before this run): `quad` was said to have no effect and ours was
+  said to reach smaller fixpoints; the full run shows ×1.3 and a tie.
+- Upstream C++'s `simplify` also restarts by recursion with the vector
+  passed by value (a full copy per merge) and `erase` (shifting).
 
 ## Testing and comparison
 - `cargo test -p west --release`: Isabelle `value` examples; exhaustive
@@ -65,7 +87,9 @@ trusted.
   false timeouts and skipped formulas. Read the raw fd.
 
 ## Open / possible next
-- Faster simplification (hashing instead of all pairs); subsumption
+- Faster simplification: each pass is still all pairs (n²); hashing on
+  "regex with one entry wildcarded" would find merges in ~n·len. Matters
+  only where lists reach thousands (the remaining timeouts). Subsumption
   (dropping a regex implied by another) is not done by AFP or us.
 - Website/CLI entry (D44): `fast_reg_checked` + `trace_to_text` are the
   intended surface. Parser front end: `mltl-parse` `parse_numbered`.

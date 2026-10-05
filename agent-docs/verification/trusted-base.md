@@ -23,7 +23,7 @@ a solver-scheduling attribute, not trust.
 the `bit_vector` solver (`bits.rs`); `WestBit`'s derived `Clone/Copy/
 PartialEq` are never used in proofs (exec compares by `match`). Unverified
 test/benchmark-only code: `src/west/tests/*.rs` reference matchers,
-`benchmarks/{driver.rs, proto*.rs, upstream_*}`, `differential/` drivers.
+`benchmarks/{driver.rs, proto.rs, ablation/*.rs, upstream_*}`, `differential/` drivers.
 
 `r2u2` (2026-10-04): no `assume`/`admit`/`external*`/`uninterp`. The exec
 part (`exec.rs`, `exec_engine.rs`) relies on vstd's `Vec` specs and, for

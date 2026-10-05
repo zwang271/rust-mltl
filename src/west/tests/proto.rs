@@ -1,7 +1,15 @@
-//! The unverified fast prototype (benchmarks/proto.rs) agrees with the
-//! verified evaluator on every short trace, for random formulas.
+//! The unverified fast prototype (benchmarks/proto.rs) and its ablation
+//! variants (benchmarks/ablation/) agree with the verified evaluator on
+//! every short trace, for random formulas. The variants only change how
+//! the work is done, so a benchmark comparing them is a fair one.
 #[path = "../benchmarks/proto.rs"]
 mod proto;
+#[path = "../benchmarks/ablation/restart.rs"]
+mod proto_restart;
+#[path = "../benchmarks/ablation/toplen.rs"]
+mod proto_toplen;
+#[path = "../benchmarks/ablation/quad.rs"]
+mod proto_quad;
 
 use mltl_core::mltl::Mltl;
 use mltl_eval::mltl_eval;
@@ -17,9 +25,16 @@ fn complen(f: &Mltl<usize>) -> usize {
     }
 }
 
-fn matches(trace: &[HashSet<usize>], r: &proto::Regex) -> bool {
-    (0..r.count()).any(|i| {
-        let t = proto::decode(r, i);
+/// Every regex of a variant's result, decoded to 2-bit entries.
+macro_rules! decoded {
+    ($m:ident, $f:expr) => {{
+        let r = $m::fast_reg($f);
+        (r.len, (0..r.count()).map(|i| $m::decode(&r, i)).collect::<Vec<_>>())
+    }};
+}
+
+fn matches(trace: &[HashSet<usize>], rs: &[Vec<Vec<u8>>]) -> bool {
+    rs.iter().any(|t| {
         trace.len() >= t.len() && t.iter().enumerate().all(|(s, st)| st.iter().enumerate().all(|(x, b)| match b {
             0b10 => trace[s].contains(&x),
             0b01 => !trace[s].contains(&x),
@@ -65,12 +80,19 @@ fn proto_agrees_with_semantics() {
         let f = random_formula(&mut g, 3, 3);
         let (n, c) = (proto::num_vars(&f), complen(&f));
         if n * (c + 1) > 14 { continue; }
-        let r = proto::fast_reg(&f);
-        assert_eq!(r.len, c, "{}", fmt(&f));
-        for len in [c, c + 1] {
-            for m in 0u64..(1 << (n * len)) {
-                let t: Vec<HashSet<usize>> = (0..len).map(|s| (0..n).filter(|&x| m >> (s * n + x) & 1 == 1).collect()).collect();
-                assert_eq!(matches(&t, &r), mltl_eval(&f, &t));
+        let variants = [
+            ("proto", decoded!(proto, &f)),
+            ("proto_restart", decoded!(proto_restart, &f)),
+            ("proto_toplen", decoded!(proto_toplen, &f)),
+            ("proto_quad", decoded!(proto_quad, &f)),
+        ];
+        for (name, (len, rs)) in &variants {
+            assert_eq!(*len, c, "{name}: {}", fmt(&f));
+            for tlen in [c, c + 1] {
+                for m in 0u64..(1 << (n * tlen)) {
+                    let t: Vec<HashSet<usize>> = (0..tlen).map(|s| (0..n).filter(|&x| m >> (s * n + x) & 1 == 1).collect()).collect();
+                    assert_eq!(matches(&t, rs), mltl_eval(&f, &t), "{name}: {}", fmt(&f));
+                }
             }
         }
         checked += 1;

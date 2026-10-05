@@ -6,7 +6,8 @@ per dataset file; a formula that takes longer than --timeout seconds is
 recorded as a timeout and the process is restarted after it.
 
 Needs a local clone of https://github.com/zwang271/WEST (env WEST_UPSTREAM).
-Usage: run.py [--impls faithful,fast,proto,upstream_rust,upstream_cpp]
+Usage: run.py [--impls faithful,fast,proto,upstream_rust,upstream_cpp,
+                       proto_restart,proto_toplen,proto_quad]
               [--timeout 10] [--limit N] [--sets d,n,m] [--hard]
 Writes results/<set>/<file>.<impl>.tsv and prints a summary."""
 import argparse, os, pathlib, select, subprocess, sys, time
@@ -19,11 +20,13 @@ upstream = pathlib.Path(os.environ["WEST_UPSTREAM"])
 def build_all(impls):
     build.mkdir(exist_ok=True)
     bins = {}
-    if {"faithful", "proto", "fast"} & set(impls):
+    if {"faithful", "proto", "fast", "proto_restart", "proto_toplen", "proto_quad"} & set(impls):
         subprocess.run(["cargo", "build", "--release", "-q", "-p", "west", "--example", "west_bench"], cwd=root, check=True)
         b = root / "target/release/examples/west_bench"
         bins["faithful"] = [str(b), "faithful"]
         bins["proto"] = [str(b), "proto"]
+        for v in ("proto_restart", "proto_toplen", "proto_quad"):
+            bins[v] = [str(b), v]
         bins["fast"] = [str(b), "fast"]
     if "upstream_rust" in impls:
         proj = build / "upstream_rust"

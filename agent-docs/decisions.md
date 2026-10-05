@@ -125,7 +125,9 @@ for cross-references; give new entries the next free number (next: D50).
   C2PO 1.00×, this rule 1.24×, the previous uniform `wpd(operands) + 1`
   1.56×. The two new ingredients are `tight.rs : cov_ub` (a node has covered
   at most `b − bpd`) and `not_caught` (a NOT has read everything its child
-  wrote). Mutation: one slot fewer per binary child → 5 errors.
+  wrote). Mutation: one slot fewer per binary child → 5 errors. A further
+  sibling-based tightening (#5 in `modules/r2u2.md`, 1.12×) was tried
+  2026-10-05 and refuted by counterexample; D50 stays.
 
 - **D12 — Milestone order.** (Progression moved before the parser: D33.) Toolchain → mltl-core → parser → formula
   progression → language partitioning → SAT solver; WEST and R2U2 once their

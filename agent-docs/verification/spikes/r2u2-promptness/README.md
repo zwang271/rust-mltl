@@ -41,3 +41,11 @@ Results (2026-10-04):
   children always 1; C2PO undersizes a slow child beside a fast sibling.
   `sizes2.py` needs `/tmp/r2sim/ringhook.py` and `search3.py` (copy this
   directory there).
+- `sizes3.py`, `sizes4.py`, `ratios.py`, `classify.py` (2026-10-04): candidate
+  rule #5 (min of D50's rule and a sibling-based `+k`), per-formula slot
+  ratios, and value-error vs regrouping classification.
+- `probe5.py`–`probe9c.py`, `stress5.py`, `one5.py`, `min5.py`, `cex5.py`
+  (2026-10-05): **#5 is wrong** (counterexample in `../../../modules/r2u2.md`,
+  "Candidate #5 is wrong"). The 0/100k result came from `rf(3, 4)`
+  (interval bounds ≤ 8) only. Lesson: test size rules with large intervals
+  and long traces (`stress5.py`) before believing them.

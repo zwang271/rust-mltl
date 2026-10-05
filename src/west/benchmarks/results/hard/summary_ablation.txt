@@ -1,0 +1,61 @@
+set                         proto          proto_restart           proto_toplen             proto_quad
+d=2              30 ok    0.000s  30 ok   0.000s x   0.9  30 ok   0.000s x   1.0  30 ok   0.000s x   1.0   (common: 30)
+           proto_restart: fewer regexes on 0, more on 0, same on 30
+           proto_toplen: fewer regexes on 0, more on 0, same on 30
+           proto_quad: fewer regexes on 0, more on 0, same on 30
+d=3              30 ok    0.007s  29 ok   0.115s x   1.3  30 ok   0.007s x   1.0  30 ok   0.008s x   0.9   (common: 29)
+           proto_restart: fewer regexes on 1, more on 1, same on 27
+           proto_toplen: fewer regexes on 0, more on 0, same on 29
+           proto_quad: fewer regexes on 0, more on 0, same on 29
+d=4              27 ok    0.002s  26 ok   0.004s x   1.1  27 ok   0.002s x   1.0  27 ok   0.002s x   1.0   (common: 26)
+           proto_restart: fewer regexes on 1, more on 0, same on 25
+           proto_toplen: fewer regexes on 0, more on 0, same on 26
+           proto_quad: fewer regexes on 0, more on 0, same on 26
+d=5              21 ok    0.022s  20 ok   1.055s x   1.9  21 ok   0.019s x   1.0  21 ok   0.020s x   0.9   (common: 20)
+           proto_restart: fewer regexes on 2, more on 3, same on 15
+           proto_toplen: fewer regexes on 0, more on 0, same on 20
+           proto_quad: fewer regexes on 0, more on 0, same on 20
+d=6              19 ok    0.080s  15 ok   0.068s x   1.5  19 ok   0.077s x   1.0  18 ok   0.079s x   1.1   (common: 15)
+           proto_restart: fewer regexes on 0, more on 1, same on 14
+           proto_toplen: fewer regexes on 0, more on 0, same on 15
+           proto_quad: fewer regexes on 0, more on 0, same on 15
+m=10             29 ok    0.002s  29 ok   0.200s x   1.2  29 ok   0.003s x   1.2  29 ok   0.003s x   1.0   (common: 29)
+           proto_restart: fewer regexes on 1, more on 0, same on 28
+           proto_toplen: fewer regexes on 0, more on 0, same on 29
+           proto_quad: fewer regexes on 0, more on 0, same on 29
+m=20             27 ok    0.017s  26 ok   0.971s x   1.8  27 ok   0.017s x   1.0  27 ok   0.019s x   1.0   (common: 26)
+           proto_restart: fewer regexes on 4, more on 0, same on 22
+           proto_toplen: fewer regexes on 0, more on 0, same on 26
+           proto_quad: fewer regexes on 0, more on 0, same on 26
+m=30             21 ok    0.005s  19 ok   0.016s x   1.8  21 ok   0.005s x   1.2  21 ok   0.005s x   1.2   (common: 19)
+           proto_restart: fewer regexes on 2, more on 0, same on 17
+           proto_toplen: fewer regexes on 0, more on 0, same on 19
+           proto_quad: fewer regexes on 0, more on 0, same on 19
+m=40             23 ok    0.537s  22 ok  12.593s x   2.8  23 ok   0.616s x   1.1  23 ok   0.716s x   1.2   (common: 22)
+           proto_restart: fewer regexes on 0, more on 2, same on 20
+           proto_toplen: fewer regexes on 0, more on 0, same on 22
+           proto_quad: fewer regexes on 0, more on 0, same on 22
+m=50             23 ok    0.018s  22 ok   0.178s x   1.5  23 ok   0.018s x   1.0  23 ok   0.018s x   1.2   (common: 22)
+           proto_restart: fewer regexes on 0, more on 0, same on 22
+           proto_toplen: fewer regexes on 0, more on 0, same on 22
+           proto_quad: fewer regexes on 0, more on 0, same on 22
+n=3              29 ok    0.005s  29 ok   0.019s x   1.4  29 ok   0.005s x   1.3  29 ok   0.005s x   1.2   (common: 29)
+           proto_restart: fewer regexes on 0, more on 0, same on 29
+           proto_toplen: fewer regexes on 0, more on 0, same on 29
+           proto_quad: fewer regexes on 0, more on 0, same on 29
+n=4              30 ok    0.002s  29 ok   0.049s x   1.5  30 ok   0.002s x   1.1  30 ok   0.002s x   1.2   (common: 29)
+           proto_restart: fewer regexes on 2, more on 3, same on 24
+           proto_toplen: fewer regexes on 0, more on 0, same on 29
+           proto_quad: fewer regexes on 0, more on 0, same on 29
+n=5              30 ok    0.537s  30 ok   3.991s x   1.5  30 ok   0.535s x   1.1  30 ok   0.541s x   1.0   (common: 30)
+           proto_restart: fewer regexes on 0, more on 3, same on 27
+           proto_toplen: fewer regexes on 0, more on 0, same on 30
+           proto_quad: fewer regexes on 0, more on 0, same on 30
+n=6              29 ok    0.048s  29 ok  10.781s x   2.0  29 ok   0.047s x   1.0  29 ok   0.051s x   1.1   (common: 29)
+           proto_restart: fewer regexes on 0, more on 2, same on 27
+           proto_toplen: fewer regexes on 0, more on 0, same on 29
+           proto_quad: fewer regexes on 0, more on 0, same on 29
+n=7              29 ok    0.120s  28 ok   0.210s x   1.2  29 ok   0.119s x   0.9  29 ok   0.121s x   1.1   (common: 28)
+           proto_restart: fewer regexes on 1, more on 1, same on 26
+           proto_toplen: fewer regexes on 0, more on 0, same on 28
+           proto_quad: fewer regexes on 0, more on 0, same on 28

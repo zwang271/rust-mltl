@@ -3,12 +3,16 @@
 formulas each implementation finished within the timeout, and on the
 formulas *all* listed implementations finished, total time and the
 geometric-mean speedup of each over the first one.
-Usage: summarize.py [results-dir] [impl,impl,...]"""
+With --sizes, also count on how many common formulas each implementation
+returns fewer / more regexes than the first.
+Usage: summarize.py [results-dir] [impl,impl,...] [--sizes]"""
 import math, pathlib, sys
 
 here = pathlib.Path(__file__).resolve().parent
-res = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else here / "results"
-impls = sys.argv[2].split(",") if len(sys.argv) > 2 else ["fast", "faithful", "upstream_rust", "upstream_cpp"]
+args = [a for a in sys.argv[1:] if not a.startswith("--")]
+sizes = "--sizes" in sys.argv
+res = pathlib.Path(args[0]) if len(args) > 0 else here / "results"
+impls = args[1].split(",") if len(args) > 1 else ["fast", "faithful", "upstream_rust", "upstream_cpp"]
 
 def load(f):
     out = {}
@@ -39,3 +43,8 @@ for d in sorted(p for p in res.iterdir() if p.is_dir() and p.name in "dnm"):
                 gm = math.exp(sum(math.log(max(data[i][k][0], 1) / max(data[impls[0]][k][0], 1)) for k in common) / len(common))
                 cells.append(f"{solved:3d} ok {t:7.3f}s x{gm:6.1f}")
         print(f"{d.name}={stem:7} " + " ".join(f"{c:>22}" for c in cells) + f"   (common: {len(common)})")
+        if sizes:
+            for i in impls[1:]:
+                fewer = sum(1 for k in common if data[i][k][1] < data[impls[0]][k][1])
+                more = sum(1 for k in common if data[i][k][1] > data[impls[0]][k][1])
+                print(f"{'':10} {i}: fewer regexes on {fewer}, more on {more}, same on {len(common) - fewer - more}")
