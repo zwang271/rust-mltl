@@ -40,6 +40,13 @@ and lays it out). It cannot change which texts are accepted or where the
 parser stopped; a bug there shows as a wrong or panicking message. Also
 `src/mltl-parse/examples/check.rs` (CLI).
 
+Unverified front door: `src/mltl` (plain Rust crate, D47). Each fn is one
+call to a verified fn plus `&str`/`String` conversion; `Atoms::print`'s
+`String::from_utf8(..).expect` relies on the printer emitting ASCII (true
+by construction; a violation would panic, not mislead). Its claims are the
+callees' `ensures`; nothing verified calls it. `#[derive(Debug)]` on
+`Mltl` and `MltlParseTree` (mltl-core) is formatting only.
+
 `propositional`: `src/propositional/src/lrat_text.rs` (text LRAT and DIMACS
 parsers, outside `verus!`) is not trusted: `check_lrat` is sound for any
 steps and any CNF it is given, so a parsing bug can only make a check fail

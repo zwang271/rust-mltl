@@ -28,5 +28,4 @@ Current state only. History is in git.
 
 ## Uncommitted work
 Agents commit only when asked, so list finished-but-uncommitted work here and
-clear it on commit.
-- Usability (2026-10-04, D47): `src/mltl` (new crate, workspace member), `mltl-parse/src/atoms.rs` + `tests/atoms.rs`, `ErrorKind::NumberTaken`, `language_partitioning/src/splits.rs`, `#[derive(Debug)]` on `Mltl`/`MltlParseTree`, doc examples + `mltl` dev-dependency in mltl-eval / formula_progression / language_partitioning. VERIFIED 2026-10-04 with a fresh target dir: mltl-core 154, mltl-eval 66, formula_progression 90, mltl-parse 156, language_partitioning 220, 0 errors. README anchors fixed; READMEs point to the front door.
+clear it on commit. (none)

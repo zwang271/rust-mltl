@@ -34,7 +34,7 @@ then what your task needs. Ground rules are in `../AGENTS.md` §3–5.
 | Verus: toolchain, commands, pitfalls | `verification/verus-notes.md` |
 | Everything trusted without proof | `verification/trusted-base.md` |
 | Isabelle ↔ Rust tables | `correspondence/` |
-| Per-module notes | `modules/` (`mltl-core.md`, `mltl-eval.md`, `formula-progression.md`, `mltl-parse.md`, `language-partitioning.md`, `west.md`, `r2u2.md`) |
+| Per-module notes | `modules/` (`mltl-core.md`, `mltl-eval.md`, `formula-progression.md`, `mltl-parse.md`, `language-partitioning.md`, `mltl.md` front door, `west.md`, `r2u2.md`) |
 | Human docs that need an owner-approved fix | `human-doc-backlog.md` |
 | Throwaway spikes (not built) | `verification/spikes/` |
 | Owner's portable prompt describing this doc system, for other repos. **Not project knowledge; don't read it for project work** | `meta/doc-system-prompt.md` |

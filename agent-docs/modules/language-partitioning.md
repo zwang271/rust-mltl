@@ -26,6 +26,14 @@ partition its language (on traces of length ≥ `wpd`). Isabelle mapping:
 - `src/union.rs`, `src/disjoint.rs`: the main theorems.
 - `src/exec.rs`: `MltlExtExec`, `ext_view`, exec builders, `LP_mltl_aux`,
   `LP_mltl` (guarantees in `ensures`), `check_composition`, `check_lp_input`.
+- `src/splits.rs` (2026-10-04, D47): building `LP_mltl` input from a plain
+  `Mltl<usize>`: `with_width(f, w)` (blocks of width `w`, last shorter;
+  `w = 1` ⇒ all-ones) and `with_compositions(f, comps)` (one composition per
+  temporal operator in reading order, checked with `check_lp_input`). Both
+  `ensures` `to_mltl(ext_view(r)) == f`, `intervals_welldef(f)`,
+  `is_composition_MLTL`. `None` for `a > b` and for `[0, usize::MAX]`
+  (length doesn't fit; `blocks`). No composition syntax in the grammar
+  (owner, 2026-10-04: other tools must not accept it; revisit later).
 - `tests/partition.rs`: Isabelle examples, input checks, random union and
   disjointness checks against `mltl-eval` (10,000 trace checks, ~0.05 s).
 - Crate: 215 VERIFIED (2026-10-03). No trusted items.

@@ -2,8 +2,8 @@
 
 Verified parser, printer and atom numbering (goal 6). Spec for humans:
 `src/mltl-parse/GRAMMAR.md` (owner-reviewed; keep it and `grammar.rs` in
-lockstep, D10). VERIFIED 2026-10-03: 142 items, 0 errors, nothing assumed;
-`cargo test -p mltl-parse --release`: 4 + 7 tests pass.
+lockstep, D10). VERIFIED 2026-10-04: 156 items, 0 errors, nothing assumed;
+`cargo test -p mltl-parse --release`: all pass (incl. `tests/atoms.rs`).
 
 ## Files
 - `lexer.rs`: `Token<N>` (N = `Vec<u8>` exec / `Seq<u8>` spec), spec
@@ -21,6 +21,20 @@ lockstep, D10). VERIFIED 2026-10-03: 142 items, 0 errors, nothing assumed;
   (`table_ok`, `lookup` via `has_entry`/`entry_index`), `assign`, `number`,
   `number_injective`, `pn_kept`, `lemma_numbering_semantics`
   (`traces_agree` ⇒ same truth value).
+- `atoms.rs` (2026-10-04, D47): `Atoms`, a shared name table. Private
+  fields + closed specs `names()`, `num()`, `wf()`; open `injective()`,
+  `grows_to()`. `number`/`parse` extend the table (reusing `assign`; numbers
+  of old names kept), `atom` (name → number, `None` if not in the table),
+  `trace` (`ensures traces_agree(named_trace(steps), …, names(), num())`, so
+  `lemma_numbering_semantics` applies), `name` (number → name: the table's
+  name if valid, else `pN`; `map_atoms(name(g), num()) == g`), `print`.
+  `pN` vs. names: invariant "pN < lo ≤ every name's number", so a `pN` with
+  N ≥ lo after the first name is rejected (`ErrorKind::NumberTaken`); with
+  no names yet, `lo` is raised instead. Names in the table are checked with
+  `exec_valid_name` at print time rather than proved valid (no lemma
+  "parsed names are `valid_name`" exists; would be a nice small proof).
+  Runtime tests: `tests/atoms.rs`. Uses vstd's finite `Set` + `Seq::to_set`
+  (`Set::new` now returns `Option<Set>` in this vstd).
 - `afp_binding.rs`: the 4 AFP binding examples, at token level.
 - `lib.rs`: `parse`, `parse_str`, `parse_numbered`, all returning
   `Result<_, ParseError>` (D42).

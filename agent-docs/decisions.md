@@ -53,6 +53,17 @@ for cross-references; give new entries the next free number (next: D50).
   only. Never use IDs or agent-docs terms when talking to the owner or in
   human docs. Housekeeping runs on a fixed cadence (see `INDEX.md`
   "Housekeeping").
+- **D47 — Usability: one front-door crate; splits by helpers, not syntax**
+  (owner, 2026-10-04). `src/mltl` (plain Rust) is the one crate users
+  import: text in, text out, each fn wrapping one verified fn. The
+  algorithm crates stay parser-free and use it only as a dev-dependency for
+  doc examples. Verified glue lives where the proofs are: `Atoms` in
+  mltl-parse (shared numbering, trace from names, printing numbered
+  formulas), `splits.rs` in language_partitioning. No composition syntax
+  (`F[0,9]<3,3,3>`) in the grammar: owner doesn't want other tools to
+  accept it; revisit (maybe a separate grammar) after using the helpers.
+  Also the natural base for the website (D44) and Python (D41).
+
 ## Scope and order
 
 - **D9 — Toolchain and in-place verification.** Latest Verus release for this
