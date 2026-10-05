@@ -4,7 +4,7 @@ Ask the owner when a question blocks work; move answered items to
 `decisions.md` (and delete here).
 
 - **Q8 — Is C2PO (compiler) in scope**, e.g. its rewrite rules
-  (`Rewrite_Rules_and_Proofs.thy`)? Owner 2026-10-04: interested, look at it
+  (in `passes.py`; `Rewrite_Rules_and_Proofs.thy` is not about them)? Owner 2026-10-04: interested, look at it
   only after R2U2 (`ideas.md`).
 - **Q10 — Fork URLs** (D9). Owner to create forks of `R2U2/r2u2` and (if a
   fork rather than a branch is wanted for an owner-owned repo)

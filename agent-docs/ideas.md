@@ -52,3 +52,9 @@ rough cost. The owner decides; nothing here is planned until it moves to
   decodes. Natural shape: a verified Rust compiler from `Mltl` to the
   stage-1 instruction layout, then to C2PO's binary. Cost: UNKNOWN, survey
   first; likely large.
+
+## Algorithm survey (2026-10-04)
+
+Literature + local-repo survey of MLTL algorithms not yet mechanized
+(class 1) and related-logic algorithms with no MLTL version (class 2):
+`project/algorithm-survey.md`. Owner is choosing which to keep.

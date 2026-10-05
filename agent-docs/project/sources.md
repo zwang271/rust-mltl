@@ -115,6 +115,13 @@ semantics diverge.
   runtime monitor that generates C code evaluating formulas with bitwise
   operations over machine words of time steps. Prior art that our
   evaluators must not reproduce (D32).
+- `~/Documents/IntegratingFRETAndR2U2Analysis/` (found 2026-10-04): FRET→MLTL
+  rewrite work (157 rules, NFM 2026). Python `Scripts/rewrite_rules.py`;
+  Isabelle `isabelle/MLTL_Rewrites.thy` (0 sorry) and `MLTL_Rewriting.thy`
+  (16 sorry).
+- `~/Documents/REU2026/automata-group/`: MARTEE (MLTL→pushdown and →timed
+  automata via progression, C++, hand proofs in `paper/`), `mltlsat`
+  (Li–Rozier–Vardi translator), PANDA (LTL→symbolic automata).
 
 ## REU 2026 Isabelle work — `REU/isabelle/` (unpublished; surveyed 2026-10-02, commit `14fdbbe`)
 - `MLTL_Properties_Extended.thy` (2479 lines): extra equivalences, CE lemmas,

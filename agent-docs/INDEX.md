@@ -30,6 +30,7 @@ then what your task needs. Ground rules are in `../AGENTS.md` §3–5.
 | R2U2: what upstream verifies, encoding gap, bugs, options | `project/m8-r2u2-assessment.md`; module `modules/r2u2.md`; Isabelle map `correspondence/r2u2.md`; Isabelle port plan `project/m8-isabelle-port.md` |
 | SAT solver: plan, measurements, progress | `project/m7-sat.md`; Isabelle map `correspondence/mltl-sat.md` |
 | Ideas and possible new directions | `ideas.md` |
+| Survey of unformalized MLTL and related-logic algorithms (candidates) | `project/algorithm-survey.md` |
 | Planned crate layout | `project/architecture.md` |
 | Verus: toolchain, commands, pitfalls | `verification/verus-notes.md` |
 | Everything trusted without proof | `verification/trusted-base.md` |
