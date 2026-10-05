@@ -22,7 +22,7 @@ monitor — so the code that runs is the code that is verified.
 | Language partitioning | AFP `Mission_Time_LTL_Language_Partition` | [`src/language_partitioning`](src/language_partitioning/README.md) | done |
 | WEST (MLTL → regular expressions) | AFP `Mission_Time_LTL_to_Regular_Expression` | [`src/west`](src/west/README.md) | done: faithful port, plus a fast version proved equivalent |
 | MLTL SAT solver | verified, unpublished | [`src/mltl-sat`](src/mltl-sat/README.md), [`src/propositional`](src/propositional/README.md) | verified translation; CaDiCaL answers checked (LRAT for UNSAT) |
-| R2U2 runtime monitor | `MLTL_R2U2-` repo, `isabelle/` (in progress) | — | planned |
+| R2U2 runtime monitor | `MLTL_R2U2-` repo, `isabelle/` (in progress) | [`src/r2u2`](src/r2u2/README.md) | done for R2U2's algorithm: verdicts proved correct and on time, with bounded queues; found a case where `r2u2_core` is wrong. The real `r2u2_core` source is not verified yet |
 
 [`src/mltl`](src/mltl/README.md) is the one crate to import for text-level
 use (formulas and traces as text in, results as text out); it covers
@@ -38,7 +38,8 @@ evaluation, progression and partitioning so far.
 
 ## Status
 
-Everything above except R2U2 is proved in Verus, and nothing is assumed
-without proof. Not verified, but not trusted either: CaDiCaL and its glue
-(verified code checks every answer) and the text wrappers in [`src/mltl`](src/mltl/).
+Everything above is proved in Verus, and nothing is assumed without proof
+(for R2U2: our implementation of its algorithm, not `r2u2_core` itself).
+Not verified, but not trusted either: CaDiCaL and its glue (verified code
+checks every answer) and the text wrappers in [`src/mltl`](src/mltl/).
 To check the proofs: [`scripts/verify.sh`](scripts/verify.sh).
