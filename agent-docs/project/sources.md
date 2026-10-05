@@ -94,7 +94,8 @@ semantics diverge.
   and several fns are `#[verifier::external]` (reasons given: floats, `&mut`
   deref of `monitor.queue_arena.control_blocks`, writes to
   `monitor.value_buffer`). Instructions: `r2u2/monitors/rust/docs/dev/verification.md`.
-  Extent/strength of these specs: UNKNOWN — survey before building on them.
+  Extent/strength surveyed 2026-10-04: operator-local only, nothing
+  semantic; reproduced on current Verus (35 verified). See `m8-r2u2-assessment.md`.
 - C monitor: `ROOT/r2u2/monitors/c` (not in scope).
 - Compiler C2PO: `ROOT/r2u2/compiler` (Python); produces the binary spec that
   `r2u2_core` decodes in `internals/process_binary.rs`.

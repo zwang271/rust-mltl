@@ -83,6 +83,39 @@ for cross-references; give new entries the next free number (next: D50).
 - **D11 — R2U2 target theorem.** `r2u2_core`'s output equals `semantics_mltl`.
   Known bugs may falsify it; handle them when reached (precondition or fix in
   the fork). The Isabelle R2U2 theories guide invariants, not the statement.
+  (2026-10-04: now the goal of the later in-place stage, D48; the first
+  stage proves the same statement for the idealized algorithm.)
+- **D48 — R2U2: idealized algorithm first, in this repo** (owner,
+  2026-10-04; facts in `project/m8-r2u2-assessment.md`). Stage 1: formalize
+  and verify an idealized R2U2 algorithm (SCQs, observers, compressed
+  verdict streams, reloop to fixpoint) inside this repo over `Mltl`,
+  proved against `semantics_mltl`. That idealized algorithm is itself the
+  research question the Isabelle development is chasing. Allowed to diverge
+  from how C2PO compiles formulas (own instruction layout and queue sizing)
+  and need not meet R2U2's memory bounds yet, **but** every divergence must
+  leave a feasible, recorded path to (a) R2U2's memory guarantees and
+  (b) the real `r2u2_core`, both Verus-verified later (stage 2, in place,
+  needs the fork, Q10). Closed proofs will later be ported back to
+  Isabelle by the owner's group, so keep proofs structured the way an
+  Isabelle proof could follow (named invariants, small lemmas). Proof
+  strategy (owner): queues and aggregated (compressed) verdicts are the
+  core algorithm and are formalized in full, but proofs first reason over
+  the **full unbounded history** of each queue; bounded circular queues
+  come later by lifting those invariants (the Isabelle development hit
+  the pain of reasoning about rings directly and fell back to histories
+  anyway; keep the layers modular). Order: LOAD (props, true, false) and
+  NOT first, to match what Isabelle has; then AND and UNTIL. Upstream
+  `r2u2_core` Verus specs are not built on (Q5 answered: operator-local only).
+- **D49 — R2U2 promptness = `wpd` deadline** (owner, 2026-10-04). Promptness
+  means: after time step `n`, every node has verdicts for all `t` with
+  `t + wpd(φ_node) ≤ n` (Isabelle's `wpd`). Not Isabelle's
+  formula-progression statement (`r2u2_promptness`): it demands verdicts as
+  soon as the outcome is semantically fixed, which R2U2 does not do (e.g.
+  `F[0,5](p & !p)`) and which hides a satisfiability problem (owner). Proved
+  for the algorithm as Isabelle/Rust define it (UNTIL's skip reports no
+  progress); a variant reporting progress was considered and proved too, but
+  is not needed and was dropped (it only emits some verdicts earlier).
+
 - **D12 — Milestone order.** (Progression moved before the parser: D33.) Toolchain → mltl-core → parser → formula
   progression → language partitioning → SAT solver; WEST and R2U2 once their
   forks exist. Reason: the core is shared; the parser makes test formulas

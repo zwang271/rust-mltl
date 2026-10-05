@@ -27,13 +27,14 @@ then what your task needs. Ground rules are in `../AGENTS.md` §3–5.
 | Where every external source lives (placeholders `REPO`, `ROOT`, `AFP`, `REU`) | `project/sources.md`; this machine's paths: `local-paths.md` (git-ignored) |
 | Milestones and tasks | `project/plan.md` (owner's summary: `../PLAN.md`) |
 | Shelved batched-evaluator design | `project/m10-batched-eval.md` |
+| R2U2: what upstream verifies, encoding gap, bugs, options | `project/m8-r2u2-assessment.md`; module `modules/r2u2.md`; Isabelle map `correspondence/r2u2.md`; Isabelle port plan `project/m8-isabelle-port.md` |
 | SAT solver: plan, measurements, progress | `project/m7-sat.md`; Isabelle map `correspondence/mltl-sat.md` |
 | Ideas and possible new directions | `ideas.md` |
 | Planned crate layout | `project/architecture.md` |
 | Verus: toolchain, commands, pitfalls | `verification/verus-notes.md` |
 | Everything trusted without proof | `verification/trusted-base.md` |
 | Isabelle ↔ Rust tables | `correspondence/` |
-| Per-module notes | `modules/` (`mltl-core.md`, `mltl-eval.md`, `formula-progression.md`, `mltl-parse.md`, `language-partitioning.md`) |
+| Per-module notes | `modules/` (`mltl-core.md`, `mltl-eval.md`, `formula-progression.md`, `mltl-parse.md`, `language-partitioning.md`, `r2u2.md`) |
 | Human docs that need an owner-approved fix | `human-doc-backlog.md` |
 | Throwaway spikes (not built) | `verification/spikes/` |
 | Owner's portable prompt describing this doc system, for other repos. **Not project knowledge; don't read it for project work** | `meta/doc-system-prompt.md` |

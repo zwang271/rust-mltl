@@ -18,6 +18,11 @@ plus `group_hash_axioms`: `usize` obeys the key model, default hasher is
 valid). `#[verifier::spinoff_prover]` on two proofs in `properties.rs` is
 a solver-scheduling attribute, not trust.
 
+`r2u2` (2026-10-04): no `assume`/`admit`/`external*`/`uninterp`. The exec
+part (`exec.rs`, `exec_engine.rs`) relies on vstd's `Vec` specs and, for
+trace states, `HashSet::contains` + `group_hash_axioms` (as mltl-eval).
+`#[verifier::rlimit(100)]` on two ring-simulation lemmas is scheduling.
+
 `mltl-parse` relies on vstd's `assume_specification` for `str::as_bytes`
 (`parse_str` only). `#[verifier::spinoff_prover]` on `printer.rs :
 exec_raw_tokens` (scheduling, not trust).

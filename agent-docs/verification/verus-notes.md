@@ -237,3 +237,14 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
   name break plain `cargo build` (use glob imports). Parser-specific proof
   patterns: `modules/mltl-parse.md`.
 
+- **rlimit in tree simulations (2026-10-04, `r2u2/src/ring_sim.rs`).** One
+  lemma simulating a pass over all node kinds hit rlimit. Fix: one lemma
+  per node kind with the children's results as `requires` (`sim_ok`), a
+  tiny dispatcher, explicit equality chains for the node's update tuple
+  (`assert(mltl_update_r(t, ..) == (Node(nd, Box::new(c2)), ..))`), and
+  `#[verifier::spinoff_prover]`. Two of them (`lemma_sim_and`,
+  `lemma_sim_until`) still need `#[verifier::rlimit(100)]` (scheduling, not
+  trust).
+- `nat % int` does not type-check: write `x as int % (n as int)`.
+- Named imports of spec fns (`use m::f;`) break the plain `cargo build`
+  (spec fns are erased); use glob imports.

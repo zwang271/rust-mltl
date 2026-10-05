@@ -8,7 +8,7 @@ Order and reasons: D12.
 ```
 M1 toolchain ─> M2 mltl-core ─┬─> M4 progression (done) ─> M3 parser, M5 lang-partition (done) ─> M7 SAT
                                ├─(fork URLs)─> M6 WEST in place
-                               └─(fork URLs)─> M8 R2U2 in place
+                               └─> M8 R2U2 (idealized first, D48)
 M9 cross-cutting, alongside.   M10 fast evaluator: scalar part done, batching shelved.
 ```
 
@@ -77,35 +77,47 @@ formulas. Open:
 - T7.12 (S) in-process CaDiCaL (crate) instead of a subprocess; deferred
   until WASM matters (owner, 2026-10-04).
 
-## M8 — R2U2 in place (goal 3)
-Blocked by Q10 (fork). Target theorem: D11. Sources: `ROOT/r2u2/monitors/rust/r2u2_core`,
-`ROOT/isabelle/R2U2_*.thy`, `ROOT/isabelle/explain_r2u2.md`, `ROOT/*_BUG.md`.
-- T8.1 (S) Add fork as submodule `vendor/r2u2` (D9). Reproduce upstream
-  verification with its pinned toolchain and recipe (`r2u2/monitors/rust/docs/dev/verification.md`); record pass/fail.
-- T8.2 (S) Audit existing specs. Known 2026-10-02: specs are per-operator
-  local properties (`previous.time`/`next_time` bookkeeping, `not` flips
-  truth) in `engines/mltl.rs` + `booleanizer.rs`; no link to MLTL semantics;
-  27 `#[verifier::external*]` (floats, div/mod, `&mut` arena deref,
-  `value_buffer` writes). Classify each external: removable / refactor needed /
-  must stay trusted. Copy into `verification/trusted-base.md` upstream section.
-- T8.3 (M) Read `explain_r2u2.md` + all `*_BUG.md`; write
-  `correspondence/r2u2.md` mapping `R2U2_Verdicts`, `R2U2_SCQ`,
-  `R2U2_Operators`, `R2U2_Function`, engine-step theories to Rust items.
-- T8.4 (S) Scope decision: MLTL engine first; booleanizer (floats) stays
-  trusted/out of scope initially.
-- T8.5 (L) Discharge `&mut` arena externals by minimal refactor (or newer Verus
-  support); SCQ invariants following `R2U2_SCQ.thy`.
-- T8.6 (L) Operator correctness on real code following `R2U2_Operators.thy`
-  (LOAD/NOT/AND/UNTIL, then release/since/trigger).
-- T8.7 (XL) Engine step + whole-monitor theorem: output matches
-  `semantics_mltl` (D11). Where documented bugs falsify it, record the
-  counterexample and decide (with owner) between fix-in-fork or precondition.
-- T8.8 (S) Bridge lemma from R2U2 verdict streams to `mltl-core` semantics.
-- T8.9 (L) Spec the C2PO binary format; verify `internals/process_binary.rs`
-  decoding (goal 6 for R2U2).
-- T8.10 (M) Upstream PRs to R2U2 (owner-driven).
-- Exit: MLTL engine of `r2u2_core` `VERIFIED` against the chosen theorem;
-  remaining externals all in the ledger with justification.
+## M8 — R2U2 (goal 3, D48)
+Facts and options: `m8-r2u2-assessment.md`. Sources: `ROOT/isabelle/R2U2_*.thy`,
+`ROOT/isabelle/explain_r2u2.md`, `ROOT/*_BUG.md`, `ROOT/r2u2/monitors/rust/r2u2_core`.
+
+### Stage 1 — idealized algorithm, in this repo (current)
+Theorem: every verdict the idealized monitor emits for position i equals
+`semantics_mltl (drop i π) φ` (and, separately, it eventually emits every
+position the trace length decides). Divergence from C2PO is allowed;
+record each one with the path back (D48).
+Progress 2026-10-04: T8.1 done (`../correspondence/r2u2.md`), T8.2 done
+(`../modules/r2u2.md` Design; owner agreed: full histories first), T8.3 done,
+T8.4 done: LOAD/NOT/AND (with completeness), UNTIL (soundness); T8.5 soundness part done (`r2u2_sound`). T8.6 done (promptness within `wpd`, D49). T8.8 done 2026-10-04 (sizes `wpd(operands)+1`, tight for the uniform rule; ring layer `r2u2_ring_eq`). T8.7 done 2026-10-04 (tree layout). Next: Isabelle port (`m8-isabelle-port.md`), flat layout.
+- T8.1 (M) Inventory + `correspondence/r2u2.md`: Isabelle definitions
+  (`SCQ`, `observer`, `verdict`, `deaggregate`, operators, `mltl_update`,
+  `r2u2_engine_step`, invariants `valid_scq`/`valid_parent_child`/`valid_tree_at`),
+  what is proved vs sorry, which proofs are worth following.
+- T8.2 (S) Design note: formula representation (tree vs instruction list
+  over `Mltl`), operator set (Isabelle's LOAD/NOT/AND/UNTIL via BNF vs
+  native OR/RELEASE as in Rust), queue model (unbounded ghost history
+  first, bounded ring later), time as `nat` in spec. Owner reviews.
+- T8.3 (M) Spec layer: compressed verdict streams + `deaggregate` and its
+  lemmas; the per-node correctness invariant (queue contents = semantics
+  of the child at those times).
+- T8.4 (L) Operators one by one preserve the invariant (LOAD, NOT, AND,
+  UNTIL, then the rest).
+- T8.5 (L) Engine step: reloop terminates, invariant holds after each time
+  step; whole-monitor soundness.
+- T8.6 (M) Completeness/promptness (verdicts appear once decidable).
+- T8.7 (M) Executable version (machine ints, arrays) proved equal to the
+  spec; differential test vs `r2u2_core` and the Isabelle SML export,
+  with the known bugs as expected differences.
+- T8.8 (M) Bounded memory: a queue-capacity rule proved sufficient (fixes
+  the shared nested-until bug), then a ring buffer refinement.
+
+### Stage 2 — later
+- Fork (Q10) as submodule; refine `r2u2_core` to the stage-1 model
+  (instruction-table decoding, `&mut` arena, u32 time). Upstream specs
+  reproduce on current Verus (35 verified) but are not built on.
+- Binary spec decoder (`internals/process_binary.rs`, goal 6).
+- Port closed proofs to Isabelle (owner's group).
+- Afterwards, possibly C2PO (`../ideas.md`).
 
 ## M9 — Cross-cutting (continuous)
 - T9.1 Differential testing: random formula + trace generator; compare our

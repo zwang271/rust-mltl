@@ -1,0 +1,6 @@
+[package]
+name = "driver"
+version = "0.1.0"
+edition = "2021"
+[dependencies]
+r2u2_core = { path = "/Users/wangzili/Documents/MLTL_R2U2-/r2u2/monitors/rust/r2u2_core" }

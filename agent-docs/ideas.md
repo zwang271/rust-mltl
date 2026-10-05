@@ -38,3 +38,17 @@ rough cost. The owner decides; nothing here is planned until it moves to
    `spinoff_prover` as files grew. Keep proof files moderate in size, and
    prefer many small lemmas over big case analyses, before this becomes a
    tax on every milestone.
+
+## Owner interest (2026-10-04)
+
+- **Formalize C2PO, the R2U2 compiler** (`ROOT/r2u2/compiler`, Python).
+  Only after R2U2 (D48). Candidate pieces: its rewrite rules (`passes.py`
+  `optimize_rewrite_rules`; hand proofs of 15 general rules in the
+  FMICS'23 proofs PDF; none mechanized. Note: despite its name,
+  `ROOT/isabelle/Rewrite_Rules_and_Proofs.thy` is an R2U2 engine-step
+  equivalence and holds no formula rewrites), common
+  subexpression sharing, queue sizing (`compute_scq_sizes`, where the
+  shared nested-until bug lives), and the binary format `r2u2_core`
+  decodes. Natural shape: a verified Rust compiler from `Mltl` to the
+  stage-1 instruction layout, then to C2PO's binary. Cost: UNKNOWN, survey
+  first; likely large.

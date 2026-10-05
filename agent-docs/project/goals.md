@@ -23,8 +23,10 @@ runnable code has meant:
 2. **Modular, reusable library** so future MLTL algorithms are developed and
    verified against a shared core (syntax, semantics, traces, intervals,
    standard lemmas like NNF / semantic equivalence / complen).
-3. **Verify R2U2 in place**: proofs over the actual `r2u2_core` Rust source,
-   replacing "Isabelle model + SML + conformance tests".
+3. **Verify R2U2** (staged 2026-10-04, D48): first an idealized R2U2
+   algorithm verified in this repo against MLTL semantics (the open
+   research question); then, along a recorded path, R2U2's memory bounds
+   and the actual `r2u2_core` Rust source in place.
 4. **Verify WEST in place**: the owner's existing public Rust WEST
    implementation (https://github.com/zwang271/WEST; D9).
 5. **Port + verify** formula progression and language partitioning in Rust
@@ -57,5 +59,6 @@ performance-optimized, verified evaluator is a desired by-product. See
   cloning); spec code may use `nat`, `Seq`, `Set`, ghost state.
 
 ## Non-goals (for now)
-- Re-verifying C2PO (the R2U2 compiler) end-to-end — UNKNOWN whether in scope.
+- Re-verifying C2PO (the R2U2 compiler) — owner interested, after R2U2
+  (`../ideas.md`).
 - The C R2U2 monitor (`ROOT/r2u2/monitors/c`).

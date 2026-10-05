@@ -21,8 +21,10 @@ Goals (details and rationale: [`agent-docs/project/goals.md`](agent-docs/project
    the `MLTL_R2U2-` repo, `isabelle/`), and the MLTL SAT solver (verified, unpublished).
 2. **Reusable library.** A modular core (syntax, semantics, traces, common
    lemmas) that future MLTL algorithms can build and verify against.
-3. **Verify R2U2 in place.** Verify the real Rust R2U2 monitor source
-   (`r2u2_core`), not an Isabelle model of it.
+3. **Verify R2U2.** First an idealized version of its algorithm, verified
+   here against MLTL semantics (the open research question, also pursued in
+   Isabelle). Later, along a recorded path, its memory bounds and the real
+   Rust monitor source (`r2u2_core`).
 4. **Verify WEST in place.** Verify Zili Wang's existing Rust WEST
    implementation (public WEST repo; not yet in this repo).
 5. **Port and verify** formula progression and language partitioning in Rust.
