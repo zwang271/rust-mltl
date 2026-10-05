@@ -1,0 +1,18 @@
+[package]
+name = "west"
+version.workspace = true
+edition.workspace = true
+description = "Verified WEST (MLTL to regular expressions), ported from AFP Mission_Time_LTL_to_Regular_Expression"
+
+[dependencies]
+vstd.workspace = true
+mltl-core = { path = "../mltl-core" }
+
+[package.metadata.verus]
+verify = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+mltl-eval = { path = "../mltl-eval" }

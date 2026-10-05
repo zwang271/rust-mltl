@@ -250,3 +250,12 @@ dependencies = [
  "verus_builtin_macros",
  "verus_state_machines_macros",
 ]
+
+[[package]]
+name = "west"
+version = "0.1.0"
+dependencies = [
+ "mltl-core",
+ "mltl-eval",
+ "vstd",
+]
