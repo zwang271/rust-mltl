@@ -35,6 +35,7 @@ name = "formula_progression"
 version = "0.1.0"
 dependencies = [
  "mimalloc",
+ "mltl",
  "mltl-core",
  "mltl-eval",
  "vstd",
@@ -60,6 +61,7 @@ dependencies = [
 name = "language_partitioning"
 version = "0.1.0"
 dependencies = [
+ "mltl",
  "mltl-core",
  "mltl-eval",
  "vstd",
@@ -105,6 +107,7 @@ dependencies = [
 name = "mltl-eval"
 version = "0.1.0"
 dependencies = [
+ "mltl",
  "mltl-core",
  "vstd",
 ]

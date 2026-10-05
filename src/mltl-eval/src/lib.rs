@@ -1,7 +1,24 @@
 //! Verified executable MLTL evaluation (AFP semantics, from mltl-core).
 //! Algorithms: `../EVAL_MLTL.md`. Trace representations: `../README.md`.
 //!
-//! # Example
+//! # Example: from text
+//!
+//! Parse the formula and the trace with one atom table (verified parser,
+//! via the `mltl` front-door crate), then evaluate:
+//!
+//! ```
+//! use mltl_eval::{mltl_eval, mltl_eval_bottom_up};
+//!
+//! let mut atoms = mltl::Atoms::new();
+//! let f = atoms.parse("G[0,2] (request -> F[0,1] grant)")?;
+//! let trace = atoms.trace([vec!["request"], vec!["grant"], vec!["request"], vec![]])?;
+//!
+//! assert!(!mltl_eval(&f, &trace));   // the request at step 2 is never granted
+//! assert!(mltl_eval_bottom_up(&f, &trace[..2]));
+//! # Ok::<(), mltl::Error>(())
+//! ```
+//!
+//! # Example: numbered atoms
 //!
 //! Atoms are numbers (`p` = 0, `q` = 1). A trace is one set of true atoms per
 //! step. Check `G[0,2] (p U[0,1] q)` on a 4-step trace:

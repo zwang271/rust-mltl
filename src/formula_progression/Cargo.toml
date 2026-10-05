@@ -20,4 +20,6 @@ name = "fp_bench"
 path = "benchmarks/driver.rs"
 
 [dev-dependencies]
+# Doc examples parse their formulas with the front-door crate.
+mltl = { path = "../mltl" }
 mimalloc = { version = "0.1", default-features = false }

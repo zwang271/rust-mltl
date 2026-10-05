@@ -17,3 +17,7 @@ workspace = true
 [[example]]
 name = "bench_driver"
 path = "benchmarks/driver.rs"
+
+[dev-dependencies]
+# Doc examples parse their formulas with the front-door crate.
+mltl = { path = "../mltl" }
