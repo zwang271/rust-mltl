@@ -35,7 +35,7 @@ interval ([`check_lp_input`](src/exec.rs#L852) decides this), then:
 
 ## What the guarantees mean
 
-"Holds" is [`semantics_mltl`](../mltl-core/src/mltl.rs#L163), the AFP
+"Holds" is [`semantics_mltl`](../mltl-core/src/mltl.rs#L164), the AFP
 semantics of MLTL. The other terms:
 [`wpd_mltl`](src/ext.rs#L349) (the trace length the theorems need),
 [`intervals_welldef`](../mltl-core/src/properties.rs#L17) (every `[a,b]`
@@ -46,7 +46,7 @@ the result equals, as in the Isabelle source:
 [`LP_mltl_aux_spec`](src/algorithm.rs#L125).
 
 Isabelle's extended formula type is here the shared
-[`MltlParseTree`](../mltl-core/src/parse_tree.rs#L22) (a formula with data
+[`MltlParseTree`](../mltl-core/src/parse_tree.rs#L23) (a formula with data
 at every node) with the composition as data
 ([`MltlExt`](src/ext.rs#L23)).
 
@@ -63,6 +63,9 @@ Every other definition and lemma of the AFP entry is ported or replaced by a
 shorter proof, with nothing trusted. Proofs:
 [`scripts/verify.sh`](../../scripts/verify.sh). Runtime checks, including
 the Isabelle examples: `cargo test -p language_partitioning --release`.
+
+To work with formulas and traces as text (atom names in, text out), use
+the front-door crate [`src/mltl`](../mltl/README.md).
 
 Agent context: [agent-docs/correspondence/language-partitioning.md](../../agent-docs/correspondence/language-partitioning.md),
 [agent-docs/modules/language-partitioning.md](../../agent-docs/modules/language-partitioning.md).

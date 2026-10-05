@@ -34,7 +34,7 @@ Both take a `Mltl<usize>` and a trace in `mltl-eval`'s format
 
 ## What the guarantees mean
 
-"Satisfies" is [`semantics_mltl`](../mltl-core/src/mltl.rs#L163), the AFP
+"Satisfies" is [`semantics_mltl`](../mltl-core/src/mltl.rs#L164), the AFP
 semantics of MLTL. The other terms in the statements:
 [`intervals_welldef`](../mltl-core/src/properties.rs#L17) (every `[a,b]`
 has `a ≤ b`), [`complen_mltl`](../mltl-core/src/properties.rs#L758) (trace
@@ -67,6 +67,9 @@ and of `Formula_Progression_Extended.thy` is ported too, with nothing
 trusted. Proofs: [`scripts/verify.sh`](../../scripts/verify.sh). Runtime checks:
 `cargo test -p formula_progression --release`. Speed compared with the
 Isabelle-exported Haskell: [`benchmarks/README.md`](benchmarks/README.md).
+
+To work with formulas and traces as text (atom names in, text out), use
+the front-door crate [`src/mltl`](../mltl/README.md).
 
 Agent context: [agent-docs/correspondence/formula-progression.md](../../agent-docs/correspondence/formula-progression.md),
 [agent-docs/modules/formula-progression.md](../../agent-docs/modules/formula-progression.md).

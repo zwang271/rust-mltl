@@ -25,8 +25,9 @@ Goals (details and rationale: [`agent-docs/project/goals.md`](agent-docs/project
    here against MLTL semantics (the open research question, also pursued in
    Isabelle). Later, along a recorded path, its memory bounds and the real
    Rust monitor source (`r2u2_core`).
-4. **Verify WEST in place.** Verify Zili Wang's existing Rust WEST
-   implementation (public WEST repo; not yet in this repo).
+4. **Port and verify WEST.** A faithful port of the AFP WEST entry plus a
+   fast bit-packed version proved equivalent; the upstream WEST repo
+   (Zili Wang's) stays as is.
 5. **Port and verify** formula progression and language partitioning in Rust.
 6. **Remove the untrusted parser.** Parsing from concrete syntax to the
    verified AST is itself specified and verified.
@@ -89,7 +90,8 @@ two readers:
    which Isabelle theory/definitions it corresponds to.
 2. **Agent:** an "Agent context" line pointing to the exact `agent-docs/`
    pages to grep for detail, e.g.
-   `Agent context: agent-docs/correspondence/west.md, agent-docs/modules/west.md`.
+   "Agent context: [agent-docs/correspondence/west.md](agent-docs/correspondence/west.md),
+   [agent-docs/modules/west.md](agent-docs/modules/west.md)".
 
 Keep these short (aim < 40 lines). Depth goes in `agent-docs/`.
 

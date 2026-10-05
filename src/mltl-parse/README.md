@@ -35,7 +35,7 @@ So if you trust link 1, you can trust the parser without reading its code.
 | §2 tokens | the token type [`Token`](src/lexer.rs#L12); [`lex_from`](src/lexer.rs#L172) splits text into tokens (longest match, spaces skipped, keywords in [`keyword`](src/lexer.rs#L137), symbols in [`symbol`](src/lexer.rs#L150), numbers above `usize::MAX` rejected) |
 | §3 `atom` … `implication` | one definition per rule: [`atom`](src/grammar.rs#L85), [`unary`](src/grammar.rs#L97), [`until_release`](src/grammar.rs#L111), [`conjunction`](src/grammar.rs#L126), [`exclusive_or`](src/grammar.rs#L137), [`disjunction`](src/grammar.rs#L148), [`implication`](src/grammar.rs#L159), [`formula`](src/grammar.rs#L172) |
 | §3 `interval`, with `a ≤ b` | [`interval`](src/grammar.rs#L73) |
-| §4 `->`, `<->`, `^` | [`implies_mltl`](../mltl-core/src/mltl.rs#L44), [`iff_mltl`](../mltl-core/src/mltl.rs#L49) (both the AFP's), [`xor_mltl`](src/grammar.rs#L22) |
+| §4 `->`, `<->`, `^` | [`implies_mltl`](../mltl-core/src/mltl.rs#L45), [`iff_mltl`](../mltl-core/src/mltl.rs#L50) (both the AFP's), [`xor_mltl`](src/grammar.rs#L22) |
 | "the whole text is one formula" | [`denotes`](src/grammar.rs#L180) |
 
 Each rule definition answers one question: "do tokens `lo` to `hi` form this
@@ -62,8 +62,8 @@ below is proved against.
 
 ## Link 2: what is proved
 
-**[`parse`](src/lib.rs#L40)** takes text and returns a formula or an error.
-Its [guarantee](src/lib.rs#L41) has two parts:
+**[`parse`](src/lib.rs#L74)** takes text and returns a formula or an error.
+Its [guarantee](src/lib.rs#L75) has two parts:
 
 - **Sound:** if it returns `f`, then `denotes(text, f)`.
 - **Complete:** if `denotes(text, f)` for some `f`, it returns exactly that
@@ -115,7 +115,7 @@ pipe in a file with one formula per line ([`examples/check.rs`](examples/check.r
 The verified lexer and parser report where they stopped and what they
 expected there, e.g. "a `)` closing the `(` at column 1". `parse` turns that
 into byte positions, and Verus checks that every position is inside the text
-([`error_ok`](src/error.rs#L31)). [`ParseError::render`](src/report.rs#L383)
+([`error_ok`](src/error.rs#L35)). [`ParseError::render`](src/report.rs#L389)
 adds the wording, the help lines and the layout. It is plain Rust and not
 verified, since it only formats: it reads the tokens around the reported
 spot (using the verified lexer) to choose a message, and it runs the parser
@@ -141,7 +141,7 @@ Supporting evidence (not proofs of the guarantees above):
 ## Optional: numbering atoms
 
 Evaluators work on numbered atoms (`Mltl<usize>`).
-[`parse_numbered`](src/lib.rs#L85) parses, then numbers the atoms as in
+[`parse_numbered`](src/lib.rs#L119) parses, then numbers the atoms as in
 GRAMMAR.md §6: `pN` is atom N, and other names get the next free numbers.
 
 For example, `request & p2 | grant & request` gives `p2` ↦ 2, `request` ↦ 3,
@@ -149,6 +149,10 @@ For example, `request & p2 | grant & request` gives `p2` ↦ 2, `request` ↦ 3,
 atom 3 holds exactly when `request` does (and so on), the numbered formula
 and the named one have the same truth value
 ([`lemma_numbering_semantics`](src/numbering.rs#L119)).
+
+For several formulas and traces of one problem, use one
+[`Atoms`](src/atoms.rs#L30) table: a name gets the same number everywhere,
+and `Atoms::print` turns numbered results back into text with the names.
 
 Agent context: [agent-docs/modules/mltl-parse.md](../../agent-docs/modules/mltl-parse.md),
 [agent-docs/decisions.md](../../agent-docs/decisions.md) (parser syntax).

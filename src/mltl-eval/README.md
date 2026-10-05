@@ -2,7 +2,7 @@
 
 Verified evaluation of MLTL formulas on traces: does a trace satisfy a
 formula? Every evaluator here is proved, in Verus, to return exactly the
-AFP semantics [`semantics_mltl`](../mltl-core/src/mltl.rs#L163) of the
+AFP semantics [`semantics_mltl`](../mltl-core/src/mltl.rs#L164) of the
 `mltl-core` crate. Each evaluator's `ensures` clause is that statement.
 
 ## Start here
@@ -10,7 +10,7 @@ AFP semantics [`semantics_mltl`](../mltl-core/src/mltl.rs#L163) of the
 - **[`mltl_eval`](src/top_down.rs#L19)** (top-down): read the semantics as
   a program, scanning each interval and stopping as soon as the answer is
   known. `ensures r == semantics_mltl(trace_view(t), f)`, and it also equals
-  the Isabelle evaluator [`mltl_eval_spec`](../mltl-core/src/properties.rs#L1908).
+  the Isabelle evaluator [`mltl_eval_spec`](../mltl-core/src/properties.rs#L2074).
 - **[`mltl_eval_bottom_up`](src/bottom_up.rs#L288)** (bottom-up):
   compute each subformula once, at every position that matters, in a table.
   Same `ensures`. It requires `t.len() < usize::MAX`, so that every position,
@@ -80,5 +80,8 @@ is about 4× faster; see [`benchmarks/README.md`](benchmarks/README.md).
 From the repository root: [`scripts/verify.sh`](../../scripts/verify.sh) (proofs) and
 `cargo test -p mltl-eval --release` (runtime cross-checks of the
 evaluators).
+
+To work with formulas and traces as text (atom names in, text out), use
+the front-door crate [`src/mltl`](../mltl/README.md).
 
 Agent context: [agent-docs/modules/mltl-eval.md](../../agent-docs/modules/mltl-eval.md), [agent-docs/decisions.md](../../agent-docs/decisions.md).
