@@ -266,6 +266,17 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
   `#[verifier::spinoff_prover]`. Two of them (`lemma_sim_and`,
   `lemma_sim_until`) still need `#[verifier::rlimit(100)]` (scheduling, not
   trust).
+- **Tightening a uniform bound to a per-item one (2026-10-04,
+  `r2u2/src/ring_sim.rs`).** Going from "all children of a node get `w + 1`
+  slots" to "child `c` gets `w_c + 1`" cost almost no proof rework because
+  the pointer lemmas already took `w` and the coverage bound as parameters:
+  the edit was to replace the two hard-wired expressions (`w` for the slack,
+  `n + 1` for the child's coverage bound) with parameters (`w`, `cap`) and
+  add one arithmetic lemma relating them (`lemma_cap_slack`). Lesson: when a
+  size or deadline appears in an invariant, pass it in rather than computing
+  it inside — the invariant then tightens by changing call sites only.
+  `nat_sub` arithmetic (`nat_sub(nat_sub(k,b), nat_sub(w,b)+1) ≤
+  nat_sub(k,w+1)`) went through with an empty proof body.
 - `nat % int` does not type-check: write `x as int % (n as int)`.
 - Named imports of spec fns (`use m::f;`) break the plain `cargo build`
   (spec fns are erased); use glob imports.

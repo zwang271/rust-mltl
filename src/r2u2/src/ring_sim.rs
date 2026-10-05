@@ -1,18 +1,27 @@
 //! The ring monitor computes exactly what the history monitor computes
 //! ([`r2u2_ring_eq`]), so soundness and promptness hold for it
-//! ([`r2u2_ring_correct`]) with `wpd(operands) + 1` slots per child queue
-//! (`w + 1` below, `w = wpd(operands)` of the reader).
+//! ([`r2u2_ring_correct`]) with [`child_slots`] slots per child queue: 1 for
+//! the child of a NOT, `w − bpd(c) + 1` for a child `c` of a binary node
+//! (`w = wpd(operands)` of the reader). Write `w_c = w − bpd(c)` for the
+//! child's slack, so its ring has `w_c + 1` slots.
 //!
-//! Pointer invariant ([`ptr_inv`]) before each pass of step `n` (`m = n + 1`):
-//! the pointer is at an entry `j` at or before the reader's first needed
-//! entry, and either at most `w` entries from `j` to the end, or `w + 1` and
-//! the child has covered the whole step (so it cannot add an entry before
-//! the next read), or the reader needs nothing stored and `j` is the last
-//! entry. Each read leaves the pointer at the first needed entry (at most
-//! `w + 1` from the end, `queue_size.rs`) or the last one. In the last pass
-//! of a step every reader already reads at `(n + 1) − w`
-//! (`queue_size.rs : lemma_last_ready`), so at most `w` remain: the form
-//! needed at the start of the next step, where the child may add one entry.
+//! Pointer invariant ([`ptr_inv`]) before each pass of step `n`, with the
+//! child's coverage bound `cap = (n + 1) − bpd(c)` as `m` (`tight.rs`:
+//! [`cov_ub`] — a node cannot have covered more): the pointer is at an entry
+//! `j` at or before the reader's first needed entry, and either at most `w_c`
+//! entries from `j` to the end, or `w_c + 1` and the child has covered all of
+//! `cap` (so it cannot add an entry before the next read), or the reader needs
+//! nothing stored and `j` is the last entry.
+//!
+//! Each read leaves the pointer at the first needed entry or the last one.
+//! For a child of a binary node the backlog is at most `cap − tau ≤ w_c + 1`
+//! (`queue_size.rs`), using `tau ≥ n − w` (promptness). In the last pass of a
+//! step every reader already reads at `(n + 1) − w`
+//! (`queue_size.rs : lemma_last_ready`), which is what the next step's bound
+//! `cap + 1` needs. For the child of a NOT the reader is always at or past
+//! everything the child wrote (`tight.rs`: [`not_caught`]), so only the
+//! child's newest entry can still be needed and one slot is enough
+//! ([`lemma_child_read_caught`]).
 use vstd::prelude::*;
 use mltl_core::mltl::*;
 use mltl_core::parse_tree::*;
@@ -27,6 +36,7 @@ use crate::promptness::*;
 use crate::queue_size::*;
 use crate::ring::*;
 use crate::ring_engine::*;
+use crate::tight::*;
 
 verus! {
 
@@ -99,6 +109,51 @@ pub proof fn lemma_first_idx_update_last(c: Seq<Verdict>, v: Verdict, t: nat)
     }
 }
 
+/// A reader at or past everything the child had written can still need only
+/// the child's one new entry, so the child's last stored entry.
+pub proof fn lemma_caught_first_idx(h: Seq<Verdict>, h2: Seq<Verdict>, tau: nat)
+    requires
+        strictly_increasing(h2),
+        h2 == h || h2 == h.push(h2.last()),
+        tau >= next_after(h),
+    ensures
+        first_idx(compact(h2), tau) + 1 >= compact(h2).len(),
+{
+    let c2 = compact(h2);
+    lemma_compact(h2);
+    lemma_first_idx(c2, tau);
+    if h2 == h {
+        assert forall|i: int| 0 <= i < c2.len() implies #[trigger] c2[i].time < tau by {
+            if i < c2.len() - 1 { assert(c2[i].time < c2[c2.len() - 1].time); }
+        }
+        lemma_first_idx_unique(c2, tau, c2.len());
+    } else {
+        let v = h2.last();
+        assert(h2.drop_last() =~= h);
+        assert(strictly_increasing(h)) by {
+            assert forall|i: int, k: int| #![trigger h[i], h[k]] 0 <= i < k < h.len() implies h[i].time < h[k].time by {
+                assert(h[i] == h2[i] && h[k] == h2[k]);
+            }
+        }
+        lemma_compact(h);
+        let c = compact(h);
+        if c.len() > 0 {
+            if c.last().val == v.val {
+                assert(c2 == c.update(c.len() - 1, v));
+            } else {
+                assert(c2 == c.push(v));
+            }
+            assert forall|i: int| 0 <= i < c2.len() - 1 implies #[trigger] c2[i].time < tau by {
+                assert(c2[i] == c[i]);
+                if i < c.len() - 1 { assert(c[i].time < c[c.len() - 1].time); }
+            }
+            if first_idx(c2, tau) + 1 < c2.len() {
+                assert(c2[first_idx(c2, tau) as int].time < tau);
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Read pointers
 // ---------------------------------------------------------------------------
@@ -125,17 +180,18 @@ pub open spec fn ptr_inv(rd: nat, child: RNode, tau: nat, w: nat, m: nat) -> boo
         || exists|j: nat| #[trigger] ptr_at(j, rd, c, child.ring.slots.len(), tau, w, m, next_after(child.all_values))
 }
 
-/// At a read of step `n` (`m = n + 1`), after the child wrote at most once:
-/// an entry `j2` at the pointer's slot, at or before the first needed entry,
-/// with at most `w + 1` entries to the end (so `lemma_ring_read` applies).
-pub proof fn lemma_ptr_read_pos(h: Seq<Verdict>, h2: Seq<Verdict>, rd: nat, size: nat, tau: nat, w: nat, n: nat) -> (j2: nat)
+/// At a read, after the child wrote at most once and stayed within its
+/// coverage bound `cap`: an entry `j2` at the pointer's slot, at or before
+/// the first needed entry, with at most `w + 1` entries to the end (so
+/// `lemma_ring_read` applies).
+pub proof fn lemma_ptr_read_pos(h: Seq<Verdict>, h2: Seq<Verdict>, rd: nat, size: nat, tau: nat, w: nat, cap: nat) -> (j2: nat)
     requires
         size == w + 1,
         strictly_increasing(h2),
-        next_after(h2) <= n + 1,
+        next_after(h2) <= cap,
         h2 == h || h2 == h.push(h2.last()),
         (compact(h).len() == 0 && rd == 0)
-            || exists|j: nat| #[trigger] ptr_at(j, rd, compact(h), size, tau, w, n + 1, next_after(h)),
+            || exists|j: nat| #[trigger] ptr_at(j, rd, compact(h), size, tau, w, cap, next_after(h)),
     ensures
         (compact(h2).len() == 0 && rd == 0) || (j2 < compact(h2).len() && rd == j2 as int % (size as int)
             && j2 <= first_idx(compact(h2), tau) && compact(h2).len() - j2 <= size),
@@ -147,7 +203,7 @@ pub proof fn lemma_ptr_read_pos(h: Seq<Verdict>, h2: Seq<Verdict>, rd: nat, size
         if c.len() == 0 && rd == 0 {
             0
         } else {
-            let j = choose|j: nat| #[trigger] ptr_at(j, rd, c, size, tau, w, n + 1, next_after(h));
+            let j = choose|j: nat| #[trigger] ptr_at(j, rd, c, size, tau, w, cap, next_after(h));
             j
         }
     } else {
@@ -169,7 +225,7 @@ pub proof fn lemma_ptr_read_pos(h: Seq<Verdict>, h2: Seq<Verdict>, rd: nat, size
             lemma_small_mod_0(size);
             0
         } else {
-            let j = choose|j: nat| #[trigger] ptr_at(j, rd, c, size, tau, w, n + 1, next_after(h));
+            let j = choose|j: nat| #[trigger] ptr_at(j, rd, c, size, tau, w, cap, next_after(h));
             if c.last().val == v.val {
                 assert(c2 == c.update(c.len() - 1, v));
                 lemma_first_idx_update_last(c, v, tau);
@@ -179,7 +235,7 @@ pub proof fn lemma_ptr_read_pos(h: Seq<Verdict>, h2: Seq<Verdict>, rd: nat, size
                 lemma_first_idx_push(c, v, tau);
                 if c.len() - j <= w {
                     j
-                } else if c.len() - j == w + 1 && next_after(h) >= n + 1 {
+                } else if c.len() - j == w + 1 && next_after(h) >= cap {
                     // the child covered the whole step: it cannot have added an entry
                     assert(false);
                     j
@@ -210,23 +266,22 @@ proof fn lemma_small_mod_0(size: nat)
     vstd::arithmetic::div_mod::lemma_small_mod(0, size);
 }
 
-/// After a read of step `n` at `tau ≥ n − w`: the pointer (at the first
-/// needed entry, or the last) satisfies the invariant for `m = n + 1`, and
-/// for `m = n + 2` if `tau ≥ (n + 1) − w`.
-pub proof fn lemma_ptr_after_read(c: Seq<Verdict>, size: nat, tau: nat, tau2: nat, w: nat, n: nat, cov: nat)
+/// After a read by a reader at `tau ≥ cap − (w + 1)` of a child that covers
+/// at most `cap`: the pointer (at the first needed entry, or the last)
+/// satisfies the invariant for `m = cap`.
+pub proof fn lemma_ptr_after_read(c: Seq<Verdict>, size: nat, tau: nat, tau2: nat, w: nat, cap: nat, cov: nat)
     requires
         strictly_increasing(c),
         tau <= tau2,
         c.len() > 0,
         size > 0,
         next_after(c) == cov,
-        cov <= n + 1,
-        tau >= nat_sub(n, w),
+        cov <= cap,
+        tau >= nat_sub(cap, w + 1),
     ensures
         ({
             let j2: nat = if first_idx(c, tau) < c.len() { first_idx(c, tau) } else { (c.len() - 1) as nat };
-            &&& ptr_at(j2, (j2 as int % (size as int)) as nat, c, size, tau2, w, n + 1, cov)
-            &&& tau >= nat_sub(n + 1, w) ==> ptr_at(j2, (j2 as int % (size as int)) as nat, c, size, tau2, w, n + 2, cov)
+            ptr_at(j2, (j2 as int % (size as int)) as nat, c, size, tau2, w, cap, cov)
         }),
 {
     lemma_first_idx(c, tau);
@@ -238,6 +293,40 @@ pub proof fn lemma_ptr_after_read(c: Seq<Verdict>, size: nat, tau: nat, tau2: na
     }
 }
 
+/// After a read by a reader that was, and stays, at or past everything the
+/// child wrote: the pointer is at the child's last entry, which is all the
+/// reader can still need. Good for every `m`, however far behind the child is.
+pub proof fn lemma_ptr_after_read_caught(c: Seq<Verdict>, size: nat, tau: nat, tau2: nat, w: nat, m: nat, cov: nat)
+    requires
+        strictly_increasing(c),
+        c.len() > 0,
+        size > 0,
+        next_after(c) == cov,
+        tau2 >= cov,
+        first_idx(c, tau) + 1 >= c.len(),
+    ensures
+        ({
+            let j2: nat = if first_idx(c, tau) < c.len() { first_idx(c, tau) } else { (c.len() - 1) as nat };
+            ptr_at(j2, (j2 as int % (size as int)) as nat, c, size, tau2, w, m, cov)
+        }),
+{
+    lemma_first_idx(c, tau);
+    let j2: nat = if first_idx(c, tau) < c.len() { first_idx(c, tau) } else { (c.len() - 1) as nat };
+    vstd::arithmetic::div_mod::lemma_mod_pos_bound(j2 as int, size as int);
+    assert forall|i: int| 0 <= i < c.len() implies #[trigger] c[i].time < tau2 by {
+        if i < c.len() - 1 { assert(c[i].time < c[c.len() - 1].time); }
+    }
+    lemma_first_idx_unique(c, tau2, c.len());
+}
+
+/// `nat_sub` composes, so a child's own bound is never later than the
+/// uniform one: `(k − b) − (w − b + 1) ≤ k − (w + 1)`.
+pub proof fn lemma_cap_slack(k: nat, w: nat, b: nat)
+    ensures
+        nat_sub(nat_sub(k, b), nat_sub(w, b) + 1) <= nat_sub(k, w + 1),
+{
+}
+
 // ---------------------------------------------------------------------------
 // The ring tree invariant
 // ---------------------------------------------------------------------------
@@ -247,21 +336,24 @@ pub open spec fn rnode_ok(d: RNode, size: nat) -> bool {
 }
 
 /// Every ring abstracts its history; every pointer is usable (`ptr_inv`,
-/// steps read `m`); children have `wpd(operands) + 1` slots.
+/// `m` steps read, so child `c` covers at most `m − bpd(c)`); the child of a
+/// NOT has 1 slot, a child `c` of a binary node has `child_slots` slots.
 pub open spec fn rtree_inv<A>(t: RTree<A>, size: nat, m: nat) -> bool
     decreases t,
 {
     &&& rnode_ok(get_aux_data(t), size)
     &&& match t {
         MltlParseTree::Not(d, c) => {
-            let w = wpd(mltl_parse_tree_to_mltl_spec(*c));
-            ptr_inv(d.rd_left, get_aux_data(*c), d.next_time, w, m) && rtree_inv(*c, w + 1, m)
+            let f = mltl_parse_tree_to_mltl_spec(*c);
+            ptr_inv(d.rd_left, get_aux_data(*c), d.next_time, 0, nat_sub(m, bpd(f))) && rtree_inv(*c, 1, m)
         },
         MltlParseTree::And(d, l, r) | MltlParseTree::Until(d, l, _, _, r) => {
             let w = operands_wpd(*l, *r);
-            &&& ptr_inv(d.rd_left, get_aux_data(*l), d.next_time, w, m)
-            &&& ptr_inv(d.rd_right, get_aux_data(*r), d.next_time, w, m)
-            &&& rtree_inv(*l, w + 1, m) && rtree_inv(*r, w + 1, m)
+            let fl = mltl_parse_tree_to_mltl_spec(*l);
+            let fr = mltl_parse_tree_to_mltl_spec(*r);
+            &&& ptr_inv(d.rd_left, get_aux_data(*l), d.next_time, child_slack(w, fl), nat_sub(m, bpd(fl)))
+            &&& ptr_inv(d.rd_right, get_aux_data(*r), d.next_time, child_slack(w, fr), nat_sub(m, bpd(fr)))
+            &&& rtree_inv(*l, child_slots(w, fl), m) && rtree_inv(*r, child_slots(w, fr), m)
         },
         _ => true,
     }
@@ -362,40 +454,74 @@ pub proof fn lemma_prompt_zero<A>(t: Tree<A>)
 // ---------------------------------------------------------------------------
 
 /// The read of one (updated) child through the reader's pointer: same as
-/// the history read, and the new pointer is usable again (for the next
-/// step too if this read is at `(n + 1) − w`).
-pub proof fn lemma_child_read<A>(c: RTree<A>, c2: RTree<A>, rd: nat, tau: nat, tau2: nat, w: nat, n: nat,
-    pi: Seq<Set<A>>)
+/// the history read, and the new pointer is usable again — for the next
+/// step's bound `cap + 1` too if the reader is already that far along.
+pub proof fn lemma_child_read<A>(c: RTree<A>, c2: RTree<A>, rd: nat, tau: nat, tau2: nat, w: nat, cap: nat, cap2: nat)
     requires
-        ptr_inv(rd, get_aux_data(c), tau, w, n + 1),
+        cap <= cap2,
+        ptr_inv(rd, get_aux_data(c), tau, w, cap),
         rnode_ok(get_aux_data(c2), w + 1),
         get_aux_data(c2).ring.slots.len() == get_aux_data(c).ring.slots.len(),
-        hist_inv(get_aux_data(c2).all_values, mltl_parse_tree_to_mltl_spec(c2), pi, n + 1),
+        strictly_increasing(get_aux_data(c2).all_values),
+        next_after(get_aux_data(c2).all_values) <= cap,
         get_aux_data(c2).all_values == get_aux_data(c).all_values
             || get_aux_data(c2).all_values == get_aux_data(c).all_values.push(get_aux_data(c2).all_values.last()),
         tau <= tau2,
-        tau >= nat_sub(n, w),
+        tau >= nat_sub(cap, w + 1),
     ensures
         ring_read(get_ring(c2), rd, tau).0 == first_from(compact(get_aux_data(c2).all_values), tau),
-        ptr_inv(ring_read(get_ring(c2), rd, tau).1, get_aux_data(c2), tau2, w, n + 1),
-        tau >= nat_sub(n + 1, w) ==> ptr_inv(ring_read(get_ring(c2), rd, tau).1, get_aux_data(c2), tau2, w, n + 2),
+        ptr_inv(ring_read(get_ring(c2), rd, tau).1, get_aux_data(c2), tau2, w, cap),
+        tau >= nat_sub(cap2, w + 1) ==> ptr_inv(ring_read(get_ring(c2), rd, tau).1, get_aux_data(c2), tau2, w, cap2),
 {
     let d2 = get_aux_data(c2);
     let size = w + 1;
     let h = get_aux_data(c).all_values;
     let h2 = d2.all_values;
-    let j = lemma_ptr_read_pos(h, h2, rd, size, tau, w, n);
+    let j = lemma_ptr_read_pos(h, h2, rd, size, tau, w, cap);
     let c2c = compact(h2);
     lemma_compact(h2);
     lemma_ring_read(d2.ring, c2c, rd, j, tau);
     if c2c.len() > 0 {
-        lemma_backlog_bound(rscq(d2), tau);
-        lemma_ptr_after_read(c2c, size, tau, tau2, w, n, next_after(h2));
         let j2: nat = if first_idx(c2c, tau) < c2c.len() { first_idx(c2c, tau) } else { (c2c.len() - 1) as nat };
-        assert(ptr_at(j2, ring_read(get_ring(c2), rd, tau).1, c2c, size, tau2, w, n + 1, next_after(h2)));
-        if tau >= nat_sub(n + 1, w) {
-            assert(ptr_at(j2, ring_read(get_ring(c2), rd, tau).1, c2c, size, tau2, w, n + 2, next_after(h2)));
+        lemma_ptr_after_read(c2c, size, tau, tau2, w, cap, next_after(h2));
+        assert(ptr_at(j2, ring_read(get_ring(c2), rd, tau).1, c2c, size, tau2, w, cap, next_after(h2)));
+        if tau >= nat_sub(cap2, w + 1) {
+            lemma_ptr_after_read(c2c, size, tau, tau2, w, cap2, next_after(h2));
+            assert(ptr_at(j2, ring_read(get_ring(c2), rd, tau).1, c2c, size, tau2, w, cap2, next_after(h2)));
         }
+    }
+}
+
+/// The read of one (updated) child by a reader that is, and stays, at or past
+/// everything the child wrote (a NOT node): same as the history read, and one
+/// slot is enough for any bound `m`.
+pub proof fn lemma_child_read_caught<A>(c: RTree<A>, c2: RTree<A>, rd: nat, tau: nat, tau2: nat, cap: nat, m: nat)
+    requires
+        ptr_inv(rd, get_aux_data(c), tau, 0, cap),
+        rnode_ok(get_aux_data(c2), 1),
+        get_aux_data(c2).ring.slots.len() == get_aux_data(c).ring.slots.len(),
+        strictly_increasing(get_aux_data(c2).all_values),
+        next_after(get_aux_data(c2).all_values) <= cap,
+        get_aux_data(c2).all_values == get_aux_data(c).all_values
+            || get_aux_data(c2).all_values == get_aux_data(c).all_values.push(get_aux_data(c2).all_values.last()),
+        tau >= next_after(get_aux_data(c).all_values),
+        tau2 >= next_after(get_aux_data(c2).all_values),
+    ensures
+        ring_read(get_ring(c2), rd, tau).0 == first_from(compact(get_aux_data(c2).all_values), tau),
+        ptr_inv(ring_read(get_ring(c2), rd, tau).1, get_aux_data(c2), tau2, 0, m),
+{
+    let d2 = get_aux_data(c2);
+    let h = get_aux_data(c).all_values;
+    let h2 = d2.all_values;
+    let j = lemma_ptr_read_pos(h, h2, rd, 1, tau, 0, cap);
+    let c2c = compact(h2);
+    lemma_compact(h2);
+    lemma_ring_read(d2.ring, c2c, rd, j, tau);
+    if c2c.len() > 0 {
+        let j2: nat = if first_idx(c2c, tau) < c2c.len() { first_idx(c2c, tau) } else { (c2c.len() - 1) as nat };
+        lemma_caught_first_idx(h, h2, tau);
+        lemma_ptr_after_read_caught(c2c, 1, tau, tau2, 0, m, next_after(h2));
+        assert(ptr_at(j2, ring_read(get_ring(c2), rd, tau).1, c2c, 1, tau2, 0, m, next_after(h2)));
     }
 }
 
@@ -428,31 +554,35 @@ pub open spec fn sim_ok<A>(c: RTree<A>, size: nat, s: Set<A>, n: nat, progress: 
 
 /// The facts about the history side that the simulation of a pass needs.
 pub open spec fn hist_pre<A>(t: Tree<A>, pi: Seq<Set<A>>, n: nat, progress: LoopProgress) -> bool {
-    &&& (progress == LoopProgress::FirstLoop && tree_inv(t, pi, n))
-        || (progress == LoopProgress::ReloopNoProgress && tree_inv(t, pi, n + 1))
+    &&& (progress == LoopProgress::FirstLoop && tree_inv(t, pi, n) && cov_ub(t, n))
+        || (progress == LoopProgress::ReloopNoProgress && tree_inv(t, pi, n + 1) && cov_ub(t, n + 1))
+    &&& not_caught(t)
     &&& nodes_ready(t, n)
     &&& tree_prompt(t, n)
     &&& n < pi.len()
 }
 
 /// Facts about one updated child, for `lemma_child_read`.
-pub proof fn lemma_child_facts<A>(c: RTree<A>, pi: Seq<Set<A>>, n: nat, progress: LoopProgress, w: nat)
+pub proof fn lemma_child_facts<A>(c: RTree<A>, pi: Seq<Set<A>>, n: nat, progress: LoopProgress, size: nat)
     requires
         hist_pre(abs_tree(c), pi, n, progress),
-        sim_ok(c, w + 1, pi[n as int], n, progress),
-        rnode_ok(get_aux_data(c), w + 1),
+        sim_ok(c, size, pi[n as int], n, progress),
+        rnode_ok(get_aux_data(c), size),
     ensures
         ({
             let c2 = mltl_update_r(c, pi[n as int], n, progress).0;
-            &&& rnode_ok(get_aux_data(c2), w + 1)
+            let ch2 = mltl_update(abs_tree(c), pi[n as int], n, progress).0;
+            &&& rnode_ok(get_aux_data(c2), size)
             &&& get_aux_data(c2).ring.slots.len() == get_aux_data(c).ring.slots.len()
             &&& hist_inv(get_aux_data(c2).all_values, mltl_parse_tree_to_mltl_spec(c2), pi, n + 1)
             &&& get_aux_data(c2).all_values == get_aux_data(c).all_values
                 || get_aux_data(c2).all_values == get_aux_data(c).all_values.push(get_aux_data(c2).all_values.last())
-            &&& get_scq_from_tree(mltl_update(abs_tree(c), pi[n as int], n, progress).0) == rscq(get_aux_data(c2))
-            &&& mltl_parse_tree_to_mltl_spec(mltl_update(abs_tree(c), pi[n as int], n, progress).0)
-                == mltl_parse_tree_to_mltl_spec(c)
-            &&& tree_inv(mltl_update(abs_tree(c), pi[n as int], n, progress).0, pi, n + 1)
+            &&& get_scq_from_tree(ch2) == rscq(get_aux_data(c2))
+            &&& mltl_parse_tree_to_mltl_spec(ch2) == mltl_parse_tree_to_mltl_spec(c)
+            &&& tree_inv(ch2, pi, n + 1)
+            &&& cov_ub(ch2, n + 1)
+            &&& not_caught(ch2)
+            &&& next_after(get_aux_data(c2).all_values) <= nat_sub(n + 1, bpd(mltl_parse_tree_to_mltl_spec(c)))
         }),
 {
     let s = pi[n as int];
@@ -463,6 +593,8 @@ pub proof fn lemma_child_facts<A>(c: RTree<A>, pi: Seq<Set<A>>, n: nat, progress
     child_updated_inv(ch, pi, n, progress);
     lemma_update_root(ch, s, n, progress);
     lemma_update_shape(ch, s, n, progress);
+    lemma_update_cov_ub(ch, pi, n, progress);
+    lemma_update_not_caught(ch, pi, n, progress);
 }
 
 /// A ring pass keeps the formula.
@@ -543,28 +675,32 @@ pub proof fn lemma_sim_not<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat, p
         t is Not,
         rtree_inv(t, size, n + 1),
         hist_pre(abs_tree(t), pi, n, progress),
-        sim_ok(*t->Not_1, wpd(mltl_parse_tree_to_mltl_spec(*t->Not_1)) + 1, pi[n as int], n, progress),
+        sim_ok(*t->Not_1, 1, pi[n as int], n, progress),
     ensures
         sim_ok(t, size, pi[n as int], n, progress),
 {
     let s = pi[n as int];
     let d = t->Not_0;
     let c = *t->Not_1;
-    let w = wpd(mltl_parse_tree_to_mltl_spec(c));
+    let f = mltl_parse_tree_to_mltl_spec(c);
+    let cap = nat_sub(n + 1, bpd(f));
     lemma_abs_shape(t);
     lemma_abs_shape(c);
     let at = abs_tree(t);
     child_updated_inv(at, pi, n, progress);
     lemma_update_root(at, s, n, progress);
-    assert(rtree_inv(c, w + 1, n + 1));
-    assert(rnode_ok(get_aux_data(c), w + 1));
+    assert(rtree_inv(c, 1, n + 1));
+    assert(rnode_ok(get_aux_data(c), 1));
     lemma_hist_pre_children(t, pi, n, progress);
-    lemma_child_facts(c, pi, n, progress, w);
+    lemma_child_facts(c, pi, n, progress, 1);
     let c2 = mltl_update_r(c, s, n, progress).0;
     let c2h = mltl_update(abs_tree(c), s, n, progress).0;
     lemma_not_step(rscq(d), get_scq_from_tree(c2h), mltl_parse_tree_to_mltl_spec(c), pi, n + 1, progress);
     let (q, p) = not_op(rscq(d), get_scq_from_tree(c2h), progress);
-    lemma_child_read(c, c2, d.rd_left, d.next_time, q.next_time, w, n, pi);
+    assert(d.next_time >= next_after(get_aux_data(c).all_values));
+    lemma_not_catch_up(rscq(d), get_aux_data(c).all_values, get_scq_from_tree(c2h), progress);
+    lemma_child_read_caught(c, c2, d.rd_left, d.next_time, q.next_time, cap, cap);
+    lemma_child_read_caught(c, c2, d.rd_left, d.next_time, q.next_time, cap, nat_sub(n + 2, bpd(f)));
     lemma_store_ok(d, q, size);
     let cp = mltl_update_r(c, s, n, progress).1;
     let (data, rd) = ring_read(get_ring(c2), d.rd_left, d.next_time);
@@ -592,8 +728,10 @@ pub proof fn lemma_sim_and<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat, p
         t is And,
         rtree_inv(t, size, n + 1),
         hist_pre(abs_tree(t), pi, n, progress),
-        sim_ok(*t->And_1, operands_wpd(*t->And_1, *t->And_2) + 1, pi[n as int], n, progress),
-        sim_ok(*t->And_2, operands_wpd(*t->And_1, *t->And_2) + 1, pi[n as int], n, progress),
+        sim_ok(*t->And_1, child_slots(operands_wpd(*t->And_1, *t->And_2),
+            mltl_parse_tree_to_mltl_spec(*t->And_1)), pi[n as int], n, progress),
+        sim_ok(*t->And_2, child_slots(operands_wpd(*t->And_1, *t->And_2),
+            mltl_parse_tree_to_mltl_spec(*t->And_2)), pi[n as int], n, progress),
     ensures
         sim_ok(t, size, pi[n as int], n, progress),
 {
@@ -601,25 +739,31 @@ pub proof fn lemma_sim_and<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat, p
     let d = t->And_0;
     let (l, r) = (*t->And_1, *t->And_2);
     let w = operands_wpd(l, r);
+    let (fl, fr) = (mltl_parse_tree_to_mltl_spec(l), mltl_parse_tree_to_mltl_spec(r));
+    let (wl, wr) = (child_slack(w, fl), child_slack(w, fr));
     lemma_abs_shape(t);
     lemma_abs_shape(l);
     lemma_abs_shape(r);
     let at = abs_tree(t);
     child_updated_inv(at, pi, n, progress);
     lemma_update_root(at, s, n, progress);
-    assert(rtree_inv(l, w + 1, n + 1) && rtree_inv(r, w + 1, n + 1));
-    assert(rnode_ok(get_aux_data(l), w + 1) && rnode_ok(get_aux_data(r), w + 1));
+    assert(rtree_inv(l, wl + 1, n + 1) && rtree_inv(r, wr + 1, n + 1));
+    assert(rnode_ok(get_aux_data(l), wl + 1) && rnode_ok(get_aux_data(r), wr + 1));
     lemma_hist_pre_children(t, pi, n, progress);
-    lemma_child_facts(l, pi, n, progress, w);
-    lemma_child_facts(r, pi, n, progress, w);
+    lemma_child_facts(l, pi, n, progress, wl + 1);
+    lemma_child_facts(r, pi, n, progress, wr + 1);
     let (l2, r2) = (mltl_update_r(l, s, n, progress).0, mltl_update_r(r, s, n, progress).0);
     let l2h = mltl_update(abs_tree(l), s, n, progress).0;
     let r2h = mltl_update(abs_tree(r), s, n, progress).0;
     lemma_and_step(rscq(d), get_scq_from_tree(l2h), get_scq_from_tree(r2h), mltl_parse_tree_to_mltl_spec(l),
         mltl_parse_tree_to_mltl_spec(r), pi, n + 1, progress);
     let (q, p) = and_op(rscq(d), get_scq_from_tree(l2h), get_scq_from_tree(r2h), progress);
-    lemma_child_read(l, l2, d.rd_left, d.next_time, q.next_time, w, n, pi);
-    lemma_child_read(r, r2, d.rd_right, d.next_time, q.next_time, w, n, pi);
+    lemma_cap_slack(n + 1, w, bpd(fl));
+    lemma_cap_slack(n + 1, w, bpd(fr));
+    lemma_cap_slack(n + 2, w, bpd(fl));
+    lemma_cap_slack(n + 2, w, bpd(fr));
+    lemma_child_read(l, l2, d.rd_left, d.next_time, q.next_time, wl, nat_sub(n + 1, bpd(fl)), nat_sub(n + 2, bpd(fl)));
+    lemma_child_read(r, r2, d.rd_right, d.next_time, q.next_time, wr, nat_sub(n + 1, bpd(fr)), nat_sub(n + 2, bpd(fr)));
     lemma_store_ok(d, q, size);
     let (lp, rp) = (mltl_update_r(l, s, n, progress).1, mltl_update_r(r, s, n, progress).1);
     let (ld, lrd) = ring_read(get_ring(l2), d.rd_left, d.next_time);
@@ -650,8 +794,10 @@ pub proof fn lemma_sim_until<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat,
         t is Until,
         rtree_inv(t, size, n + 1),
         hist_pre(abs_tree(t), pi, n, progress),
-        sim_ok(*t->Until_1, operands_wpd(*t->Until_1, *t->Until_4) + 1, pi[n as int], n, progress),
-        sim_ok(*t->Until_4, operands_wpd(*t->Until_1, *t->Until_4) + 1, pi[n as int], n, progress),
+        sim_ok(*t->Until_1, child_slots(operands_wpd(*t->Until_1, *t->Until_4),
+            mltl_parse_tree_to_mltl_spec(*t->Until_1)), pi[n as int], n, progress),
+        sim_ok(*t->Until_4, child_slots(operands_wpd(*t->Until_1, *t->Until_4),
+            mltl_parse_tree_to_mltl_spec(*t->Until_4)), pi[n as int], n, progress),
     ensures
         sim_ok(t, size, pi[n as int], n, progress),
 {
@@ -659,24 +805,30 @@ pub proof fn lemma_sim_until<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat,
     let d = t->Until_0;
     let (l, r) = (*t->Until_1, *t->Until_4);
     let w = operands_wpd(l, r);
+    let (fl, fr) = (mltl_parse_tree_to_mltl_spec(l), mltl_parse_tree_to_mltl_spec(r));
+    let (wl, wr) = (child_slack(w, fl), child_slack(w, fr));
     lemma_abs_shape(t);
     lemma_abs_shape(l);
     lemma_abs_shape(r);
     let at = abs_tree(t);
     child_updated_inv(at, pi, n, progress);
     lemma_update_root(at, s, n, progress);
-    assert(rtree_inv(l, w + 1, n + 1) && rtree_inv(r, w + 1, n + 1));
-    assert(rnode_ok(get_aux_data(l), w + 1) && rnode_ok(get_aux_data(r), w + 1));
+    assert(rtree_inv(l, wl + 1, n + 1) && rtree_inv(r, wr + 1, n + 1));
+    assert(rnode_ok(get_aux_data(l), wl + 1) && rnode_ok(get_aux_data(r), wr + 1));
     lemma_hist_pre_children(t, pi, n, progress);
-    lemma_child_facts(l, pi, n, progress, w);
-    lemma_child_facts(r, pi, n, progress, w);
+    lemma_child_facts(l, pi, n, progress, wl + 1);
+    lemma_child_facts(r, pi, n, progress, wr + 1);
     let (l2, r2) = (mltl_update_r(l, s, n, progress).0, mltl_update_r(r, s, n, progress).0);
     let l2h = mltl_update(abs_tree(l), s, n, progress).0;
     let r2h = mltl_update(abs_tree(r), s, n, progress).0;
     let (q, o, p) = until_op(rscq(d), get_scq_from_tree(l2h), get_scq_from_tree(r2h), d.obs, progress);
     lemma_until_next_time_mono(rscq(d), get_scq_from_tree(l2h), get_scq_from_tree(r2h), d.obs, progress);
-    lemma_child_read(l, l2, d.rd_left, d.next_time, q.next_time, w, n, pi);
-    lemma_child_read(r, r2, d.rd_right, d.next_time, q.next_time, w, n, pi);
+    lemma_cap_slack(n + 1, w, bpd(fl));
+    lemma_cap_slack(n + 1, w, bpd(fr));
+    lemma_cap_slack(n + 2, w, bpd(fl));
+    lemma_cap_slack(n + 2, w, bpd(fr));
+    lemma_child_read(l, l2, d.rd_left, d.next_time, q.next_time, wl, nat_sub(n + 1, bpd(fl)), nat_sub(n + 2, bpd(fl)));
+    lemma_child_read(r, r2, d.rd_right, d.next_time, q.next_time, wr, nat_sub(n + 1, bpd(fr)), nat_sub(n + 2, bpd(fr)));
     lemma_store_ok(d, q, size);
     let (a, ub) = (t->Until_2, t->Until_3);
     let (lp, rp) = (mltl_update_r(l, s, n, progress).1, mltl_update_r(r, s, n, progress).1);
@@ -717,17 +869,17 @@ pub proof fn lemma_sim_update<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat
         MltlParseTree::True(_) | MltlParseTree::False(_) | MltlParseTree::Prop(_, _) =>
             lemma_sim_leaf(t, size, pi, n, progress),
         MltlParseTree::Not(_, c) => {
-            lemma_sim_update(*c, wpd(mltl_parse_tree_to_mltl_spec(*c)) + 1, pi, n, progress);
+            lemma_sim_update(*c, 1, pi, n, progress);
             lemma_sim_not(t, size, pi, n, progress);
         },
         MltlParseTree::And(_, l, r) => {
-            lemma_sim_update(*l, operands_wpd(*l, *r) + 1, pi, n, progress);
-            lemma_sim_update(*r, operands_wpd(*l, *r) + 1, pi, n, progress);
+            lemma_sim_update(*l, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*l)), pi, n, progress);
+            lemma_sim_update(*r, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*r)), pi, n, progress);
             lemma_sim_and(t, size, pi, n, progress);
         },
         MltlParseTree::Until(_, l, _, _, r) => {
-            lemma_sim_update(*l, operands_wpd(*l, *r) + 1, pi, n, progress);
-            lemma_sim_update(*r, operands_wpd(*l, *r) + 1, pi, n, progress);
+            lemma_sim_update(*l, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*l)), pi, n, progress);
+            lemma_sim_update(*r, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*r)), pi, n, progress);
             lemma_sim_until(t, size, pi, n, progress);
         },
         _ => {
@@ -750,6 +902,8 @@ pub proof fn lemma_sim_repeat<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat
     ensures
         abs_tree(repeat_mltl_update_r(t, pi[n as int], n, fuel)) == repeat_mltl_update(abs_tree(t), pi[n as int], n, fuel),
         rtree_inv(repeat_mltl_update_r(t, pi[n as int], n, fuel), size, n + 2),
+        cov_ub(abs_tree(repeat_mltl_update_r(t, pi[n as int], n, fuel)), n + 1),
+        not_caught(abs_tree(repeat_mltl_update_r(t, pi[n as int], n, fuel))),
     decreases fuel,
 {
     let no = LoopProgress::ReloopNoProgress;
@@ -757,6 +911,8 @@ pub proof fn lemma_sim_repeat<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat
     lemma_sim_update(t, size, pi, n, no);
     lemma_update_reloop(at, pi, n);
     lemma_update_measure(at, pi, n);
+    lemma_update_cov_ub(at, pi, n, no);
+    lemma_update_not_caught(at, pi, n, no);
     let (t2, p) = mltl_update_r(t, pi[n as int], n, no);
     if p == no {
         lemma_last_ready(at, pi, n);
@@ -777,6 +933,8 @@ pub proof fn lemma_sim_step<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat)
     ensures
         abs_tree(r2u2_engine_step_r(t, pi[n as int], n)) == r2u2_engine_step(abs_tree(t), pi[n as int], n),
         rtree_inv(r2u2_engine_step_r(t, pi[n as int], n), size, n + 2),
+        cov_ub(abs_tree(r2u2_engine_step_r(t, pi[n as int], n)), n + 1),
+        not_caught(abs_tree(r2u2_engine_step_r(t, pi[n as int], n))),
 {
     let first = LoopProgress::FirstLoop;
     let at = abs_tree(t);
@@ -786,6 +944,8 @@ pub proof fn lemma_sim_step<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat)
     lemma_update_prompt(at, pi, n, first, n);
     lemma_update_ready(at, pi, n, n, first, n);
     lemma_update_c(at, pi, n, first);
+    lemma_update_cov_ub(at, pi, n, first);
+    lemma_update_not_caught(at, pi, n, first);
     lemma_update_size(at, pi[n as int], n, first);
     lemma_abs_shape(t);
     let t1 = mltl_update_r(t, pi[n as int], n, first).0;
@@ -802,10 +962,14 @@ pub proof fn lemma_sim_run<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, k: nat)
         tree_inv(abs_tree(t), pi, 0),
         untils_ready(abs_tree(t), 0),
         nodes_ready(abs_tree(t), 0),
+        cov_ub(abs_tree(t), 0),
+        not_caught(abs_tree(t)),
         k <= pi.len(),
     ensures
         abs_tree(r2u2_run_r(t, pi, k)) == r2u2_run(abs_tree(t), pi, k),
         rtree_inv(r2u2_run_r(t, pi, k), size, k + 1),
+        cov_ub(r2u2_run(abs_tree(t), pi, k), k),
+        not_caught(r2u2_run(abs_tree(t), pi, k)),
     decreases k,
 {
     if k > 0 {
@@ -825,6 +989,8 @@ pub proof fn lemma_sim_run<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, k: nat)
 
 /// The initial ring tree: empty rings of the planned sizes, abstracting the
 /// initial history tree.
+#[verifier::spinoff_prover]
+#[verifier::rlimit(100)]
 pub proof fn lemma_initial_ring<A>(f: Mltl<A>, size: nat)
     requires
         size >= 1,
@@ -841,17 +1007,19 @@ pub proof fn lemma_initial_ring<A>(f: Mltl<A>, size: nat)
     vstd::arithmetic::div_mod::lemma_small_mod(0, size);
     assert(rnode_ok(d, size));
     match f {
-        Mltl::Not(phi) => lemma_initial_ring(*phi, ring_need(f)),
+        Mltl::Not(phi) => lemma_initial_ring(*phi, 1),
         Mltl::And(phi, psi) | Mltl::Until(phi, _, _, psi) => {
-            lemma_initial_ring(*phi, ring_need(f));
-            lemma_initial_ring(*psi, ring_need(f));
+            let w = operands_wpd_of(f);
+            lemma_initial_ring(*phi, child_slots(w, *phi));
+            lemma_initial_ring(*psi, child_slots(w, *psi));
         },
         _ => {},
     }
 }
 
-/// **The ring monitor equals the history monitor.** With rings of
-/// `wpd(operands) + 1` slots per child queue (1 for the root), monitoring
+/// **The ring monitor equals the history monitor.** With [`child_slots`]
+/// slots per child queue (1 for the child of a NOT and for the root,
+/// `wpd(operands) − bpd(child) + 1` for a child of a binary node), monitoring
 /// any `φ` (intervals `a ≤ b`) on any trace gives the same verdicts.
 pub proof fn r2u2_ring_eq<A>(phi: Mltl<A>, pi: Seq<Set<A>>)
     requires
@@ -866,6 +1034,7 @@ pub proof fn r2u2_ring_eq<A>(phi: Mltl<A>, pi: Seq<Set<A>>)
     lemma_initial_tree(c, pi);
     lemma_initial_ready(c);
     lemma_initial_nodes_ready(c);
+    lemma_initial_tight(c);
     let rt = parse_tree_with_ring(c, 1);
     lemma_sim_run(rt, 1, pi, pi.len());
     lemma_abs_shape(r2u2_run_r(rt, pi, pi.len()));

@@ -33,3 +33,11 @@ Results (2026-10-04):
   only, and then only the newest entry is needed); with `wpd + 1` slots the
   pointer slot is overwritten in ~7% of reads but never wrongly; `+2`:
   never overwritten. `max(1, wpd)`: 1093/20000 runs wrong.
+- `sizes.py` / `sizes2.py` (2026-10-04, 20k runs): total slots and wrong
+  runs for the candidate sizing rules. C2PO/Isabelle (sibling-based)
+  80 wrong (value errors) at 1.00×; uniform `wpd(operands)+1` 0 wrong at 1.56×; per-child
+  `max(wpd(operands) − bpd(c), 0)+1` (what we proved, D50) 0 wrong at
+  1.24×. `need.py`/`need2.py` measure the per-node need directly: NOT
+  children always 1; C2PO undersizes a slow child beside a fast sibling.
+  `sizes2.py` needs `/tmp/r2sim/ringhook.py` and `search3.py` (copy this
+  directory there).

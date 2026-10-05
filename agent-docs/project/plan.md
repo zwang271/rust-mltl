@@ -80,7 +80,7 @@ position the trace length decides). Divergence from C2PO is allowed;
 record each one with the path back (D48).
 Progress 2026-10-04: T8.1 done (`../correspondence/r2u2.md`), T8.2 done
 (`../modules/r2u2.md` Design; owner agreed: full histories first), T8.3 done,
-T8.4 done: LOAD/NOT/AND (with completeness), UNTIL (soundness); T8.5 soundness part done (`r2u2_sound`). T8.6 done (promptness within `wpd`, D49). T8.8 done 2026-10-04 (sizes `wpd(operands)+1`, tight for the uniform rule; ring layer `r2u2_ring_eq`). T8.7 done 2026-10-04 (tree layout). Next: Isabelle port (`m8-isabelle-port.md`), flat layout.
+T8.4 done: LOAD/NOT/AND (with completeness), UNTIL (soundness); T8.5 soundness part done (`r2u2_sound`). T8.6 done (promptness within `wpd`, D49). T8.8 done 2026-10-04 (ring layer `r2u2_ring_eq`; sizes first uniform `wpd(operands)+1`, then tightened per child to `max(wpd(operands) − bpd(c), 0)+1` with NOT child and root 1, D50). T8.7 done 2026-10-04 (tree layout). Next: Isabelle port (`m8-isabelle-port.md`), flat layout.
 - T8.1 (M) Inventory + `correspondence/r2u2.md`: Isabelle definitions
   (`SCQ`, `observer`, `verdict`, `deaggregate`, operators, `mltl_update`,
   `r2u2_engine_step`, invariants `valid_scq`/`valid_parent_child`/`valid_tree_at`),

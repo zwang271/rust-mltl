@@ -54,7 +54,11 @@ Isabelle port can follow it theory by theory.
    measure), `ring_abs` (entry `i` of the compacted history in slot
    `i mod N`), `ring_write_abs`, `ring_read_abs`, pointer invariant
    (`ptr_room`, three cases), per-pass simulation, `r2u2_ring_eq`,
-   `r2u2_ring_correct` with sizes `wpd(operands) + 1`.
+   `r2u2_ring_correct` with `child_slots`
+   (`max(wpd(operands) − bpd(c), 0) + 1`; NOT child and root 1). Needs
+   `tight.rs` first: `cov_ub` (a node has covered at most `b − bpd`) and
+   `not_caught` (a NOT has read everything its child wrote) — small
+   induction-over-passes lemmas, ~330 lines in Verus.
 9. (Optional) `R2U2_Code`: `export_code` the ring engine; differential test
    against `src/r2u2` exec (`monitor_trace`) and `r2u2_core`.
 

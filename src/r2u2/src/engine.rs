@@ -156,6 +156,20 @@ pub open spec fn wpd<A>(f: Mltl<A>) -> nat
     }
 }
 
+/// `bpd φ` (`R2U2_Parse_Tree.thy`): best-case propagation delay, the
+/// fewest steps after time `t` the verdict for `t` needs.
+pub open spec fn bpd<A>(f: Mltl<A>) -> nat
+    decreases f,
+{
+    match f {
+        Mltl::True | Mltl::False | Mltl::Prop(_) => 0,
+        Mltl::Not(phi) => bpd(*phi),
+        Mltl::And(phi, psi) | Mltl::Or(phi, psi) => crate::operators::min_nat(bpd(*phi), bpd(*psi)),
+        Mltl::Future(a, _, phi) | Mltl::Global(a, _, phi) => (a + bpd(*phi)) as nat,
+        Mltl::Until(phi, a, _, psi) | Mltl::Release(phi, a, _, psi) => (a + crate::operators::min_nat(bpd(*phi), bpd(*psi))) as nat,
+    }
+}
+
 /// `repeat_mltl_update T π_h n ReloopWithProgress`: repeat passes until one
 /// makes no progress (at most `fuel` passes).
 pub open spec fn repeat_mltl_update<A>(t: Tree<A>, state: Set<A>, n: nat, fuel: nat) -> Tree<A>

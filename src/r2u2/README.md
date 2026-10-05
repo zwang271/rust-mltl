@@ -14,10 +14,10 @@ reports false, and proves it is always right.
 
 ## Start here
 
-**[`Monitor`](src/exec_engine.rs#L515)** is the monitor: `Monitor::new(φ)`,
-then [`step`](src/exec_engine.rs#L575)`(state)` once per time step (a
+**[`Monitor`](src/exec_engine.rs#L553)** is the monitor: `Monitor::new(φ)`,
+then [`step`](src/exec_engine.rs#L613)`(state)` once per time step (a
 `HashSet` of the atoms true at that step), then
-[`verdicts`](src/exec_engine.rs#L639)`()`. The `ensures` clause of `step` is
+[`verdicts`](src/exec_engine.rs#L677)`()`. The `ensures` clause of `step` is
 the guarantee: after `k` steps, for every trace that starts with the states
 fed so far,
 
@@ -27,7 +27,7 @@ fed so far,
   ([`wpd`](src/engine.rs#L147)) is the formula's worst-case delay, the sum of
   the upper bounds along its deepest chain of temporal operators.
 
-[`monitor_trace`](src/exec_engine.rs#L692) runs a whole trace, with the same
+[`monitor_trace`](src/exec_engine.rs#L731) runs a whole trace, with the same
 guarantee in its `ensures`.
 
 A verdict `(v, t)` means "`v` at every step after the previous verdict's
@@ -48,9 +48,11 @@ next:
   ([`r2u2_sound`](src/soundness.rs#L520)) and on time
   ([`r2u2_prompt`](src/promptness.rs#L475)).
 - **Ring model** ([`ring_engine.rs`](src/ring_engine.rs)): queues are ring
-  buffers with read pointers, as in R2U2. With `wpd(operands) + 1` slots per
-  queue it gives exactly the history model's verdicts
-  ([`r2u2_ring_eq`](src/ring_sim.rs#L856)); one slot fewer is not enough.
+  buffers with read pointers, as in R2U2. It gives exactly the history
+  model's verdicts ([`r2u2_ring_eq`](src/ring_sim.rs#L1024)) with
+  [`child_slots`](src/ring_engine.rs#L159) slots per queue — 1 for the child
+  of a `!` and for the root, `wpd(operands) − bpd(child) + 1` elsewhere,
+  where `bpd` is the best-case delay. One slot fewer is not enough.
 - **Executable** ([`exec.rs`](src/exec.rs),
   [`exec_engine.rs`](src/exec_engine.rs)): the ring model as running code.
 

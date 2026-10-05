@@ -18,5 +18,6 @@ pub mod queue_size;
 pub mod ring;
 pub mod ring_engine;
 pub mod ring_sim;
+pub mod tight;
 pub mod exec;
 pub mod exec_engine;

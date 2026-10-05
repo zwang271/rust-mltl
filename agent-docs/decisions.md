@@ -114,6 +114,18 @@ for cross-references; give new entries the next free number (next: D50).
   for the algorithm as Isabelle/Rust define it (UNTIL's skip reports no
   progress); a variant reporting progress was considered and proved too, but
   is not needed and was dropped (it only emits some verdicts earlier).
+- **D50 — R2U2 queue sizes: per-child `max(wpd(operands) − bpd(c), 0) + 1`**
+  (owner asked 2026-10-04 "how aggressively can we optimize our bounds down
+  to as close as R2U2's as possible without being wrong"; proved the same
+  day). Child of a NOT: 1 slot. Child `c` of AND/UNTIL: that formula, with
+  `wpd(operands)` the larger `wpd` of the node's two children. Root: 1.
+  Chosen over C2PO/Isabelle's `max(wpd(sibling) − bpd(c), 0) + 1` because
+  that one is wrong (80/20000 random runs (value errors; 92 raw-list differences, 12 of them only regrouping); `R2U2_Bugs.thy`): it bounds the
+  skew between siblings but not how far the *reader* lags. Totals (20k runs):
+  C2PO 1.00×, this rule 1.24×, the previous uniform `wpd(operands) + 1`
+  1.56×. The two new ingredients are `tight.rs : cov_ub` (a node has covered
+  at most `b − bpd`) and `not_caught` (a NOT has read everything its child
+  wrote). Mutation: one slot fewer per binary child → 5 errors.
 
 - **D12 — Milestone order.** (Progression moved before the parser: D33.) Toolchain → mltl-core → parser → formula
   progression → language partitioning → SAT solver; WEST and R2U2 once their

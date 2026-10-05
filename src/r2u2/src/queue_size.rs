@@ -13,6 +13,11 @@
 //! Isabelle sizes a child's queue `max(wpd ψ − bpd φ, 0) + 1`
 //! (`queue_size_sibling_nodes`) without proof; for the counterexample in
 //! `R2U2_Bugs.thy` that gives 1 slot where 2 are needed.
+//!
+//! This bound is uniform over a node's children. `tight.rs` sharpens it per
+//! child (a child `c` cannot have covered more than `(n + 1) − bpd(c)`, and a
+//! NOT always reads everything its child wrote), which is what the ring layer
+//! actually uses (`ring_engine.rs : child_slots`).
 use vstd::prelude::*;
 use mltl_core::mltl::*;
 use mltl_core::parse_tree::*;

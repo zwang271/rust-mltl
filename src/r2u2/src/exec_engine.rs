@@ -385,20 +385,55 @@ pub fn wpd_ex(f: &Mltl<usize>) -> (r: Option<usize>)
     }
 }
 
-/// Executable `ring_need`.
-pub fn ring_need_ex(f: &Mltl<usize>) -> (r: Option<usize>)
+/// Executable `bpd` (`None` on overflow).
+pub fn bpd_ex(f: &Mltl<usize>) -> (r: Option<usize>)
     ensures
-        r.is_some() ==> r.unwrap() == ring_need(*f),
+        r.is_some() ==> r.unwrap() == bpd(*f),
+    decreases f,
 {
     match f {
-        Mltl::Not(phi) | Mltl::Future(_, _, phi) | Mltl::Global(_, _, phi) => wpd_ex(phi)?.checked_add(1),
+        Mltl::True | Mltl::False | Mltl::Prop(_) => Some(0),
+        Mltl::Not(phi) => bpd_ex(phi),
+        Mltl::And(phi, psi) | Mltl::Or(phi, psi) => {
+            let x = bpd_ex(phi)?;
+            let y = bpd_ex(psi)?;
+            Some(if x <= y { x } else { y })
+        },
+        Mltl::Future(a, _, phi) | Mltl::Global(a, _, phi) => {
+            let x = bpd_ex(phi)?;
+            a.checked_add(x)
+        },
+        Mltl::Until(phi, a, _, psi) | Mltl::Release(phi, a, _, psi) => {
+            let x = bpd_ex(phi)?;
+            let y = bpd_ex(psi)?;
+            a.checked_add(if x <= y { x } else { y })
+        },
+    }
+}
+
+/// Executable `operands_wpd_of`.
+pub fn operands_wpd_ex(f: &Mltl<usize>) -> (r: Option<usize>)
+    ensures
+        r.is_some() ==> r.unwrap() == operands_wpd_of(*f),
+{
+    match f {
+        Mltl::Not(phi) | Mltl::Future(_, _, phi) | Mltl::Global(_, _, phi) => wpd_ex(phi),
         Mltl::And(phi, psi) | Mltl::Or(phi, psi) | Mltl::Until(phi, _, _, psi) | Mltl::Release(phi, _, _, psi) => {
             let x = wpd_ex(phi)?;
             let y = wpd_ex(psi)?;
-            (if x >= y { x } else { y }).checked_add(1)
+            Some(if x >= y { x } else { y })
         },
         _ => Some(0),
     }
+}
+
+/// Executable `child_slots`.
+pub fn child_slots_ex(w: usize, c: &Mltl<usize>) -> (r: Option<usize>)
+    ensures
+        r.is_some() ==> r.unwrap() == child_slots(w as nat, *c),
+{
+    let b = bpd_ex(c)?;
+    (if w >= b { w - b } else { 0 }).checked_add(1)
 }
 
 fn initial_ex_node(size: usize, tau: usize, lb: usize, ub: usize) -> (d: ExNode)
@@ -421,41 +456,44 @@ pub fn init_ex(f: &Mltl<usize>, size: usize) -> (r: Option<ExTree>)
         r.is_some() ==> tview(r.unwrap()) == parse_tree_with_ring(*f, size as nat) && twf(r.unwrap()),
     decreases f,
 {
-    let k = ring_need_ex(f)?;
     match f {
         Mltl::True => Some(MltlParseTree::True(initial_ex_node(size, 0, 0, 0))),
         Mltl::False => Some(MltlParseTree::False(initial_ex_node(size, 0, 0, 0))),
         Mltl::Prop(p) => Some(MltlParseTree::Prop(initial_ex_node(size, 0, 0, 0), *p)),
         Mltl::Not(phi) => {
-            let c = init_ex(phi, k)?;
+            let c = init_ex(phi, 1)?;
             Some(MltlParseTree::Not(initial_ex_node(size, 0, 0, 0), Box::new(c)))
         },
         Mltl::And(phi, psi) => {
-            let l = init_ex(phi, k)?;
-            let r = init_ex(psi, k)?;
+            let w = operands_wpd_ex(f)?;
+            let l = init_ex(phi, child_slots_ex(w, phi)?)?;
+            let r = init_ex(psi, child_slots_ex(w, psi)?)?;
             Some(MltlParseTree::And(initial_ex_node(size, 0, 0, 0), Box::new(l), Box::new(r)))
         },
         Mltl::Or(phi, psi) => {
-            let l = init_ex(phi, k)?;
-            let r = init_ex(psi, k)?;
+            let w = operands_wpd_ex(f)?;
+            let l = init_ex(phi, child_slots_ex(w, phi)?)?;
+            let r = init_ex(psi, child_slots_ex(w, psi)?)?;
             Some(MltlParseTree::Or(initial_ex_node(size, 0, 0, 0), Box::new(l), Box::new(r)))
         },
         Mltl::Future(a, b, phi) => {
-            let c = init_ex(phi, k)?;
+            let c = init_ex(phi, 1)?;
             Some(MltlParseTree::Future(initial_ex_node(size, *a, *a, *b), *a, *b, Box::new(c)))
         },
         Mltl::Global(a, b, phi) => {
-            let c = init_ex(phi, k)?;
+            let c = init_ex(phi, 1)?;
             Some(MltlParseTree::Global(initial_ex_node(size, *a, *a, *b), *a, *b, Box::new(c)))
         },
         Mltl::Until(phi, a, b, psi) => {
-            let l = init_ex(phi, k)?;
-            let r = init_ex(psi, k)?;
+            let w = operands_wpd_ex(f)?;
+            let l = init_ex(phi, child_slots_ex(w, phi)?)?;
+            let r = init_ex(psi, child_slots_ex(w, psi)?)?;
             Some(MltlParseTree::Until(initial_ex_node(size, *a, *a, *b), Box::new(l), *a, *b, Box::new(r)))
         },
         Mltl::Release(phi, a, b, psi) => {
-            let l = init_ex(phi, k)?;
-            let r = init_ex(psi, k)?;
+            let w = operands_wpd_ex(f)?;
+            let l = init_ex(phi, child_slots_ex(w, phi)?)?;
+            let r = init_ex(psi, child_slots_ex(w, psi)?)?;
             Some(MltlParseTree::Release(initial_ex_node(size, *a, *a, *b), Box::new(l), *a, *b, Box::new(r)))
         },
     }
@@ -669,6 +707,7 @@ pub proof fn monitor_correct(m: &Monitor, pi: Seq<Set<usize>>)
     crate::soundness::lemma_initial_tree(c, pi);
     crate::promptness::lemma_initial_ready(c);
     crate::queue_size::lemma_initial_nodes_ready(c);
+    crate::tight::lemma_initial_tight(c);
     let rt = initial_tree_spec(phi);
     lemma_run_r_prefix(rt, m.trace@, pi, k);
     crate::ring_sim::lemma_sim_run(rt, 1, pi, k);
