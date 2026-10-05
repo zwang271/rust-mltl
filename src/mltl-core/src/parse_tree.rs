@@ -19,6 +19,7 @@ verus! {
 /// Variant and argument order match the Isabelle constructors (`Prop_e`,
 /// `True_e`, ...): the data comes first, e.g. `Until(d, φ, a, b, ψ)` is
 /// `Until_e d φ a b ψ`. Bounds are `usize`, as in `Mltl` (D15).
+#[derive(Debug)]
 pub enum MltlParseTree<A, B> {
     /// `Prop_e d p`
     Prop(B, A),

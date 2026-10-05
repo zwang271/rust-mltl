@@ -17,6 +17,7 @@ broadcast use vstd::set::group_set_lemmas;
 /// Interval bounds are `usize` (Isabelle: `nat`); specs read them as `nat`.
 /// Variant order and argument order match the Isabelle constructors, e.g.
 /// `Until(φ, a, b, ψ)` is `Until_mltl φ a b ψ` (`φ U[a,b] ψ`).
+#[derive(Debug)]
 pub enum Mltl<A> {
     /// `True_mltl`
     True,

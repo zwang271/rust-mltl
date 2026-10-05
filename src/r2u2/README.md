@@ -22,7 +22,7 @@ the guarantee: after `k` steps, for every trace that starts with the states
 fed so far,
 
 - every verdict is right: it gives each step `t` it covers the truth value
-  of `φ` at `t` ([`semantics_mltl`](../mltl-core/src/mltl.rs#L163)), and
+  of `φ` at `t` ([`semantics_mltl`](../mltl-core/src/mltl.rs#L164)), and
 - every step `t` with `t + wpd(φ) < k` is covered. `wpd(φ)`
   ([`wpd`](src/engine.rs#L147)) is the formula's worst-case delay, the sum of
   the upper bounds along its deepest chain of temporal operators.
