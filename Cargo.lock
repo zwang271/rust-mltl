@@ -84,6 +84,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "mltl"
+version = "0.1.0"
+dependencies = [
+ "formula_progression",
+ "language_partitioning",
+ "mltl-core",
+ "mltl-eval",
+ "mltl-parse",
+]
+
+[[package]]
 name = "mltl-core"
 version = "0.1.0"
 dependencies = [

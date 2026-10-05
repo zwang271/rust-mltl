@@ -1,0 +1,15 @@
+[package]
+name = "mltl"
+version.workspace = true
+edition.workspace = true
+description = "Front door to the verified MLTL crates: parse, evaluate, progress, partition, print"
+
+[dependencies]
+mltl-core = { path = "../mltl-core" }
+mltl-parse = { path = "../mltl-parse" }
+mltl-eval = { path = "../mltl-eval" }
+formula_progression = { path = "../formula_progression" }
+language_partitioning = { path = "../language_partitioning" }
+
+[lints]
+workspace = true
