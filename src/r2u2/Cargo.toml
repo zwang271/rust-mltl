@@ -2,7 +2,7 @@
 name = "r2u2"
 version.workspace = true
 edition.workspace = true
-description = "A verified R2U2 runtime monitor for MLTL"
+description = "A verified idealized R2U2 runtime-monitoring algorithm (stage 1: full queue histories)"
 
 [dependencies]
 vstd.workspace = true
@@ -16,3 +16,8 @@ workspace = true
 
 [dev-dependencies]
 mltl-eval = { path = "../mltl-eval" }
+mltl-parse = { path = "../mltl-parse" }
+
+[[example]]
+name = "r2u2_bench"
+path = "benchmarks/driver.rs"

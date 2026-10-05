@@ -1,0 +1,17 @@
+# steps=200000 atoms=3
+formula	ours_us	r2u2_core_us	ratio	note
+atom	13421	6500	2.1	covered 200000/200000, 0 differ
+response G[0,10](!p0 | F[0,5] p1)	168936	22859	7.4	covered 199989/199989, 0 differ
+until p0 U[0,20] p1	42714	13161	3.2	covered 199998/199998, 0 differ
+nested G[0,5](!p0 | (p1 U[2,8] p2))	189884	29426	6.5	covered 199993/199993, 0 differ
+wide F[0,100] p0 & G[0,100] p1	114636	19276	5.9	covered 200000/200000, 0 differ
+random0 (depth 4)	14865	6056	2.5	covered 200000/200000, 0 differ
+random1 (depth 4)	171099	20783	8.2	covered 199993/199993, 0 differ
+random2 (depth 4)	222395	38127	5.8	covered 199994/199994, 189 differ
+random3 (depth 4)	211669	36698	5.8	covered 199990/199990, 0 differ
+random4 (depth 4)	389594	60068	6.5	covered 199988/199988, 0 differ
+random5 (depth 4)	183423	19213	9.5	covered 199998/199998, 0 differ
+random6 (depth 4)	296083	25111	11.8	covered 199993/199993, 0 differ
+random7 (depth 4)	540816	64184	8.4	covered 199998/199998, 0 differ
+random8 (depth 4)	462827	55470	8.3	covered 199988/199988, 0 differ
+random9 (depth 4)	310091	46494	6.7	covered 200000/200000, 0 differ

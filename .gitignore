@@ -25,3 +25,4 @@ src/formula_progression/benchmarks/build/
 
 # Agent worktrees
 /.claude/worktrees/
+src/r2u2/benchmarks/build/
