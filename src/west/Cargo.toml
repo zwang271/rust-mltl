@@ -16,3 +16,12 @@ workspace = true
 
 [dev-dependencies]
 mltl-eval = { path = "../mltl-eval" }
+mltl-parse = { path = "../mltl-parse" }
+
+[[example]]
+name = "west_diff"
+path = "differential/driver.rs"
+
+[[example]]
+name = "west_bench"
+path = "benchmarks/driver.rs"
