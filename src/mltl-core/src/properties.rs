@@ -1500,6 +1500,172 @@ pub proof fn convert_bnf_complen<A>(f: Mltl<A>)
     }
 }
 
+// ---------------------------------------------------------------------------
+// r2u2 form  (MLTL_Properties_Extended.thy, section "r2u2 Form"; ROOT copy)
+// ---------------------------------------------------------------------------
+
+/// `is_r2u2_form` (Isabelle: `inductive`): BNF plus `False`. These are the
+/// formulas the R2U2 engine model evaluates directly.
+pub open spec fn is_r2u2_form<A>(f: Mltl<A>) -> bool
+    decreases f,
+{
+    match f {
+        Mltl::True | Mltl::False | Mltl::Prop(_) => true,
+        Mltl::Not(phi) => is_r2u2_form(*phi),
+        Mltl::And(phi, psi) | Mltl::Until(phi, _, _, psi) => is_r2u2_form(*phi) && is_r2u2_form(*psi),
+        Mltl::Or(_, _) | Mltl::Future(_, _, _) | Mltl::Global(_, _, _) | Mltl::Release(_, _, _, _) => false,
+    }
+}
+
+/// `convert_r2u2_form`: as `convert_bnf`, but `False` stays `False`.
+pub open spec fn convert_r2u2_form<A>(f: Mltl<A>) -> Mltl<A>
+    decreases f,
+{
+    match f {
+        Mltl::True => Mltl::True,
+        Mltl::False => Mltl::False,
+        Mltl::Prop(p) => Mltl::Prop(p),
+        Mltl::Not(phi) => Mltl::Not(Box::new(convert_r2u2_form(*phi))),
+        Mltl::And(phi, psi) => Mltl::And(Box::new(convert_r2u2_form(*phi)), Box::new(convert_r2u2_form(*psi))),
+        Mltl::Or(phi, psi) => Mltl::Not(Box::new(Mltl::And(
+            Box::new(Mltl::Not(Box::new(convert_r2u2_form(*phi)))),
+            Box::new(Mltl::Not(Box::new(convert_r2u2_form(*psi)))),
+        ))),
+        Mltl::Future(a, b, phi) => Mltl::Until(Box::new(Mltl::True), a, b, Box::new(convert_r2u2_form(*phi))),
+        Mltl::Global(a, b, phi) => Mltl::Not(Box::new(Mltl::Until(
+            Box::new(Mltl::True), a, b, Box::new(Mltl::Not(Box::new(convert_r2u2_form(*phi)))),
+        ))),
+        Mltl::Until(phi, a, b, psi) => Mltl::Until(Box::new(convert_r2u2_form(*phi)), a, b, Box::new(convert_r2u2_form(*psi))),
+        Mltl::Release(phi, a, b, psi) => Mltl::Not(Box::new(Mltl::Until(
+            Box::new(Mltl::Not(Box::new(convert_r2u2_form(*phi)))), a, b,
+            Box::new(Mltl::Not(Box::new(convert_r2u2_form(*psi)))),
+        ))),
+    }
+}
+
+/// `convert_r2u2_form_is_r2u2_form`
+pub proof fn convert_r2u2_form_is_r2u2_form<A>(f: Mltl<A>)
+    ensures
+        is_r2u2_form(convert_r2u2_form(f)),
+    decreases f,
+{
+    reveal_with_fuel(is_r2u2_form, 4);
+    match f {
+        Mltl::True | Mltl::False | Mltl::Prop(_) => {},
+        Mltl::Not(phi) | Mltl::Future(_, _, phi) | Mltl::Global(_, _, phi) => convert_r2u2_form_is_r2u2_form(*phi),
+        Mltl::And(phi, psi) | Mltl::Or(phi, psi) | Mltl::Until(phi, _, _, psi) | Mltl::Release(phi, _, _, psi) => {
+            convert_r2u2_form_is_r2u2_form(*phi);
+            convert_r2u2_form_is_r2u2_form(*psi);
+        },
+    }
+}
+
+/// `convert_r2u2_form_welldef_intervals`
+pub proof fn convert_r2u2_form_welldef_intervals<A>(f: Mltl<A>)
+    requires
+        intervals_welldef(f),
+    ensures
+        intervals_welldef(convert_r2u2_form(f)),
+    decreases f,
+{
+    reveal_with_fuel(intervals_welldef, 4);
+    match f {
+        Mltl::True | Mltl::False | Mltl::Prop(_) => {},
+        Mltl::Not(phi) | Mltl::Future(_, _, phi) | Mltl::Global(_, _, phi) => convert_r2u2_form_welldef_intervals(*phi),
+        Mltl::And(phi, psi) | Mltl::Or(phi, psi) | Mltl::Until(phi, _, _, psi) | Mltl::Release(phi, _, _, psi) => {
+            convert_r2u2_form_welldef_intervals(*phi);
+            convert_r2u2_form_welldef_intervals(*psi);
+        },
+    }
+}
+
+/// Formulas already in r2u2 form are left unchanged.
+pub proof fn convert_r2u2_form_id<A>(f: Mltl<A>)
+    requires
+        is_r2u2_form(f),
+    ensures
+        convert_r2u2_form(f) == f,
+    decreases f,
+{
+    match f {
+        Mltl::Not(phi) => convert_r2u2_form_id(*phi),
+        Mltl::And(phi, psi) | Mltl::Until(phi, _, _, psi) => {
+            convert_r2u2_form_id(*phi);
+            convert_r2u2_form_id(*psi);
+        },
+        _ => {},
+    }
+}
+
+/// `convert_r2u2_form_equiv`: `intervals_welldef φ ⟹ φ ≡_m convert_r2u2_form φ`
+pub proof fn convert_r2u2_form_equiv<A>(f: Mltl<A>)
+    requires
+        intervals_welldef(f),
+    ensures
+        semantic_equiv(f, convert_r2u2_form(f)),
+    decreases f,
+{
+    match f {
+        Mltl::True | Mltl::False | Mltl::Prop(_) => {},
+        Mltl::Not(phi) => {
+            convert_r2u2_form_equiv(*phi);
+            not_ce(*phi, convert_r2u2_form(*phi));
+        },
+        Mltl::And(phi, psi) => {
+            convert_r2u2_form_equiv(*phi);
+            convert_r2u2_form_equiv(*psi);
+            and_ce_left(*phi, convert_r2u2_form(*phi), *psi);
+            and_ce_right(convert_r2u2_form(*phi), *psi, convert_r2u2_form(*psi));
+            semantic_equiv_transitive(f, Mltl::And(Box::new(convert_r2u2_form(*phi)), psi), convert_r2u2_form(f));
+        },
+        Mltl::Or(phi, psi) => {
+            convert_r2u2_form_equiv(*phi);
+            convert_r2u2_form_equiv(*psi);
+            let (c1, c2) = (convert_r2u2_form(*phi), convert_r2u2_form(*psi));
+            assert forall|pi: Seq<Set<A>>| #[trigger] semantics_mltl(pi, f) == semantics_mltl(pi, convert_r2u2_form(f)) by {
+                reveal_with_fuel(semantics_mltl, 3);
+                assert(semantics_mltl(pi, *phi) == semantics_mltl(pi, c1));
+                assert(semantics_mltl(pi, *psi) == semantics_mltl(pi, c2));
+            }
+        },
+        Mltl::Future(a, b, phi) => {
+            convert_r2u2_form_equiv(*phi);
+            future_ce(a, b, *phi, convert_r2u2_form(*phi));
+            future_as_until(a, b, convert_r2u2_form(*phi));
+            semantic_equiv_transitive(f, Mltl::Future(a, b, Box::new(convert_r2u2_form(*phi))), convert_r2u2_form(f));
+        },
+        Mltl::Global(a, b, phi) => {
+            convert_r2u2_form_equiv(*phi);
+            let c = convert_r2u2_form(*phi);
+            globally_ce(a, b, *phi, c);
+            globally_future_dual(a, b, c);
+            future_as_until(a, b, Mltl::Not(Box::new(c)));
+            let fut = Mltl::Future(a, b, Box::new(Mltl::Not(Box::new(c))));
+            let unt = Mltl::Until(Box::new(Mltl::True), a, b, Box::new(Mltl::Not(Box::new(c))));
+            not_ce(fut, unt);
+            semantic_equiv_transitive(f, Mltl::Global(a, b, Box::new(c)), Mltl::Not(Box::new(fut)));
+            semantic_equiv_transitive(f, Mltl::Not(Box::new(fut)), convert_r2u2_form(f));
+        },
+        Mltl::Until(phi, a, b, psi) => {
+            convert_r2u2_form_equiv(*phi);
+            convert_r2u2_form_equiv(*psi);
+            until_ce_left(a, b, *phi, convert_r2u2_form(*phi), *psi);
+            until_ce_right(a, b, convert_r2u2_form(*phi), *psi, convert_r2u2_form(*psi));
+            semantic_equiv_transitive(f, Mltl::Until(Box::new(convert_r2u2_form(*phi)), a, b, psi), convert_r2u2_form(f));
+        },
+        Mltl::Release(phi, a, b, psi) => {
+            convert_r2u2_form_equiv(*phi);
+            convert_r2u2_form_equiv(*psi);
+            let (c1, c2) = (convert_r2u2_form(*phi), convert_r2u2_form(*psi));
+            release_ce_left(a, b, *phi, c1, *psi);
+            release_ce_right(a, b, c1, *psi, c2);
+            semantic_equiv_transitive(f, Mltl::Release(Box::new(c1), a, b, psi), Mltl::Release(Box::new(c1), a, b, Box::new(c2)));
+            release_until_dual(a, b, c1, c2);
+            semantic_equiv_transitive(f, Mltl::Release(Box::new(c1), a, b, Box::new(c2)), convert_r2u2_form(f));
+        },
+    }
+}
+
 pub proof fn bnf_convert_bnf<A>(f: Mltl<A>)
     requires
         is_bnf(f),

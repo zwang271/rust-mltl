@@ -87,9 +87,15 @@ but nothing ported here uses it.
 | `mltl_parse_tree_preserves_size`, `mltl_parse_tree_{true,…,release}_inv` | same | proof | `obtains` → `ensures t is Not && phi == …(*t->Not_1)` etc. |
 | — | `mltl_parse_tree_to_mltl_map_aux_data` | proof | Not in Isabelle: data maps keep the formula. |
 
-**Omitted as R2U2-specific (D17)** — belong with the R2U2 formalization (M8):
-- `is_r2u2_form`, `convert_r2u2_form`, `convert_r2u2_form_is_r2u2_form`,
-  `convert_r2u2_form_equiv`, `convert_r2u2_form_welldef_intervals`.
+**r2u2 form** (ported 2026-10-04 for M8, `properties.rs`; VERIFIED, Verus
+0.2026.09.27.3cf1832, mltl-core 160 verified):
+
+| Isabelle | Rust | Kind | Notes |
+|---|---|---|---|
+| `inductive is_r2u2_form` | `is_r2u2_form` | spec | Recursive predicate from the `inductive_simps` (as `is_bnf`). |
+| `convert_r2u2_form` | `convert_r2u2_form` | spec | Spec only (no exec yet); same equations; `atomic` case split into True/False/Prop. |
+| `convert_r2u2_form_is_r2u2_form`, `convert_r2u2_form_welldef_intervals`, `convert_r2u2_form_equiv` | same | proof | `_equiv` follows `convert_bnf_equiv`. |
+| — | `convert_r2u2_form_id` | proof | Not in Isabelle: r2u2-form formulas are fixed points. |
 
 | Isabelle name | Rust item | Kind | Divergence / notes |
 |---|---|---|---|
