@@ -49,6 +49,8 @@ pub mod afp_binding;
 pub mod error;
 pub mod report;
 pub mod atoms;
+pub mod trace;
+pub mod csv;
 
 use vstd::prelude::*;
 use vstd::string::StringSliceAdditionalSpecFns;
@@ -109,7 +111,7 @@ pub fn parse_str(text: &str) -> (r: Result<ExecFormula, ParseError>)
     parse(text.as_bytes())
 }
 
-/// [`parse`], then number the atoms (GRAMMAR.md §6): `pN` is atom N, other
+/// [`parse`], then number the atoms (GRAMMAR.md §5): `pN` is atom N, other
 /// names get the next free numbers in order of first appearance. Returns the
 /// numbered formula and the table of non-`pN` names.
 ///

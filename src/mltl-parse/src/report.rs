@@ -20,6 +20,8 @@ use std::fmt;
 use crate::error::{ErrorKind, ParseError};
 use crate::lexer::{lex, Span, Token};
 use crate::parser::Expected;
+use crate::trace::TraceExpected;
+use crate::csv::CsvError;
 
 /// One underlined part of the text.
 struct Label {
@@ -268,6 +270,93 @@ fn after_formula(src: &[u8], t: &Tokens, k: usize, open: Option<usize>, d: &mut 
     }
 }
 
+const TRACE_NOTE: &str = "note: a trace lists the true atoms of each step, e.g. `[{request}, {grant, ok}, {}]`";
+
+/// A trace in the sets syntax stopped at `at`.
+fn trace_diagnostic(src: &[u8], at: &Span, e: &TraceExpected, d: &mut Diagnostic) {
+    let t = Tokens::new(src);
+    let k = t.index(at.start);
+    let f = shown(src, &t, k);
+    let prev_comma = k > 0 && t.is(k - 1, |x| matches!(x, Token::Comma));
+    let found_close = t.is(k, |x| matches!(x, Token::RBrack | Token::RBrace));
+    if prev_comma && found_close && matches!(e, TraceExpected::Step | TraceExpected::Name) {
+        d.title = "trailing comma".to_string();
+        d.labels.push(primary(t.start(k - 1), t.end(k - 1), "remove this `,`"));
+        d.notes.push(TRACE_NOTE.to_string());
+        return;
+    }
+    let (title, label) = match e {
+        TraceExpected::Open => (format!("expected `[` to start a trace, found {f}"), "expected `[` here"),
+        TraceExpected::StepOrClose => (format!("expected `{{` or `]`, found {f}"), "expected a step `{…}` here"),
+        TraceExpected::Step => (format!("expected `{{`, found {f}"), "expected a step `{…}` here"),
+        TraceExpected::NameOrClose => (format!("expected an atom name or `}}`, found {f}"), "expected a name here"),
+        TraceExpected::Name => (format!("expected an atom name, found {f}"), "expected a name here"),
+        TraceExpected::CommaOrCloseStep => (format!("expected `,` or `}}`, found {f}"), "expected `,` or `}` here"),
+        TraceExpected::CommaOrClose => (format!("expected `,` or `]`, found {f}"), "expected `,` or `]` here"),
+        TraceExpected::End => (format!("unexpected {f} after the end of the trace"), "the trace ended before this"),
+    };
+    d.title = title;
+    d.labels.push(primary(at.start, at.end, label));
+    match (e, t.tok(k)) {
+        (TraceExpected::Open | TraceExpected::StepOrClose, Some(Token::Name(_)))
+        | (TraceExpected::Open, Some(Token::LBrace)) => {
+            d.notes.push("help: a trace is written in brackets, one `{…}` per step: `[{a}, {}]`".to_string());
+        }
+        (TraceExpected::CommaOrCloseStep, Some(Token::Name(_))) => {
+            d.notes.push("help: separate names with `,`: `{a, b}`".to_string());
+        }
+        (TraceExpected::CommaOrClose, Some(Token::LBrace)) => {
+            d.notes.push("help: separate steps with `,`: `[{a}, {b}]`".to_string());
+        }
+        (TraceExpected::Name | TraceExpected::NameOrClose, Some(Token::True | Token::False | Token::KwF | Token::KwG | Token::KwU | Token::KwR)) => {
+            d.notes.push(format!("note: {f} is a keyword, not an atom name"));
+        }
+        (TraceExpected::Name | TraceExpected::NameOrClose, Some(Token::Not)) => {
+            d.notes.push("note: list only the atoms that are true; every other atom is false".to_string());
+        }
+        _ => d.notes.push(TRACE_NOTE.to_string()),
+    }
+}
+
+/// The number of comma-separated items on the line at `at`.
+fn line_cells(src: &[u8], at: &Span) -> usize {
+    src[at.start.min(src.len())..at.end.min(src.len())].iter().filter(|&&c| c == b',').count() + 1
+}
+
+/// A CSV trace broke a rule on the line at `at`.
+fn csv_diagnostic(src: &[u8], at: &Span, e: &CsvError, d: &mut Diagnostic) {
+    let header = "note: a CSV trace starts with a header naming the atoms, e.g. `# request,grant`, then one row of `0`/`1` per step";
+    match e {
+        CsvError::NoHeader => {
+            d.title = "empty CSV trace: no header line".to_string();
+            d.notes.push(header.to_string());
+        }
+        CsvError::BadHeader => {
+            d.title = "bad CSV header".to_string();
+            d.labels.push(primary(at.start, at.end, "expected `#`, then atom names separated by commas"));
+            d.notes.push(header.to_string());
+        }
+        CsvError::DuplicateName => {
+            d.title = "an atom is named twice in the CSV header".to_string();
+            d.labels.push(primary(at.start, at.end, "each column needs a different name"));
+        }
+        CsvError::RowLength => {
+            // The header is the first non-blank line.
+            let text = String::from_utf8_lossy(src);
+            let width = text.lines().find(|l| !l.trim_matches([' ', '\t']).is_empty())
+                .map_or(0, |l| l.matches(',').count() + 1);
+            let n = line_cells(src, at);
+            d.title = format!("row has {n} value{}, the header names {width} atom{}",
+                if n == 1 { "" } else { "s" }, if width == 1 { "" } else { "s" });
+            d.labels.push(primary(at.start, at.end, format!("expected {width} values")));
+        }
+        CsvError::BadValue => {
+            d.title = "CSV values must be `0` or `1`".to_string();
+            d.labels.push(primary(at.start, at.end, "a value here is not `0` or `1`"));
+        }
+    }
+}
+
 impl ParseError {
     fn diagnostic(&self, src: &[u8]) -> Diagnostic {
         let mut d = Diagnostic { title: String::new(), labels: Vec::new(), notes: Vec::new() };
@@ -311,6 +400,8 @@ impl ParseError {
                     so a later `pN` must have a smaller N".to_string());
                 d.notes.push("help: use only names, or parse the formula with the largest `pN` first".to_string());
             }
+            ErrorKind::Trace(e) => trace_diagnostic(src, at, e, &mut d),
+            ErrorKind::Csv(e) => csv_diagnostic(src, at, e, &mut d),
             ErrorKind::Expected(e) => {
                 let t = Tokens::new(src);
                 let k = t.index(at.start);
@@ -410,11 +501,34 @@ impl fmt::Debug for Span {
 
 impl fmt::Debug for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let kind = match &self.kind {
+        write!(f, "{:?} at {:?}", self.kind, self.at)
+    }
+}
+
+impl fmt::Debug for ErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let kind = match self {
             ErrorKind::UnknownChar => "UnknownChar",
             ErrorKind::NumberTooLarge => "NumberTooLarge",
             ErrorKind::NumberingFailed => "NumberingFailed",
             ErrorKind::NumberTaken => "NumberTaken",
+            ErrorKind::Trace(e) => match e {
+                TraceExpected::Open => "Trace(Open)",
+                TraceExpected::StepOrClose => "Trace(StepOrClose)",
+                TraceExpected::Step => "Trace(Step)",
+                TraceExpected::NameOrClose => "Trace(NameOrClose)",
+                TraceExpected::Name => "Trace(Name)",
+                TraceExpected::CommaOrCloseStep => "Trace(CommaOrCloseStep)",
+                TraceExpected::CommaOrClose => "Trace(CommaOrClose)",
+                TraceExpected::End => "Trace(End)",
+            },
+            ErrorKind::Csv(e) => match e {
+                CsvError::NoHeader => "Csv(NoHeader)",
+                CsvError::BadHeader => "Csv(BadHeader)",
+                CsvError::DuplicateName => "Csv(DuplicateName)",
+                CsvError::RowLength => "Csv(RowLength)",
+                CsvError::BadValue => "Csv(BadValue)",
+            },
             ErrorKind::Expected(e) => match e {
                 Expected::Formula => "Expected(Formula)",
                 Expected::IntervalOpen => "Expected(IntervalOpen)",
@@ -427,7 +541,7 @@ impl fmt::Debug for ParseError {
                 Expected::End => "Expected(End)",
             },
         };
-        write!(f, "{kind} at {:?}", self.at)
+        write!(f, "{kind}")
     }
 }
 

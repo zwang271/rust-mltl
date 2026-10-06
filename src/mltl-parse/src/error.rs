@@ -21,6 +21,10 @@ pub enum ErrorKind {
     /// belong to a name of the table (N is at or above the first number
     /// given to a name).
     NumberTaken,
+    /// A trace in the sets syntax: the parser expected something else at `at`.
+    Trace(crate::trace::TraceExpected),
+    /// A CSV trace that breaks a rule of GRAMMAR.md §6.
+    Csv(crate::csv::CsvError),
 }
 
 /// A text that is not a formula: what went wrong, where (`at`), and the

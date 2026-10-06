@@ -13,6 +13,16 @@ Formulas are the `Mltl` type of [mltl-core](../mltl-core/README.md), with
 atoms given by their names. `->` is not part of that type, so it is stored as
 the `!a | b` it stands for, and printed that way.
 
+It also reads and prints traces, the true atoms at each step, either as
+sets or in R2U2's CSV format:
+
+```
+[{request}, {grant, ok}, {}]          # request,grant,ok
+                                      1,0,0
+                                      0,1,1
+                                      0,0,0
+```
+
 ## What "verified" means here
 
 [`GRAMMAR.md`](GRAMMAR.md) is the ground truth: it says which texts are
@@ -32,11 +42,13 @@ So if you trust link 1, you can trust the parser without reading its code.
 
 | GRAMMAR.md | Verus definition |
 |---|---|
-| §2 tokens | the token type [`Token`](src/lexer.rs#L12); [`lex_from`](src/lexer.rs#L172) splits text into tokens (longest match, spaces skipped, keywords in [`keyword`](src/lexer.rs#L137), symbols in [`symbol`](src/lexer.rs#L150), numbers above `usize::MAX` rejected) |
-| §3 `atom` … `implication` | one definition per rule: [`atom`](src/grammar.rs#L85), [`unary`](src/grammar.rs#L97), [`until_release`](src/grammar.rs#L111), [`conjunction`](src/grammar.rs#L126), [`exclusive_or`](src/grammar.rs#L137), [`disjunction`](src/grammar.rs#L148), [`implication`](src/grammar.rs#L159), [`formula`](src/grammar.rs#L172) |
-| §3 `interval`, with `a ≤ b` | [`interval`](src/grammar.rs#L73) |
-| §4 `->`, `<->`, `^` | [`implies_mltl`](../mltl-core/src/mltl.rs#L45), [`iff_mltl`](../mltl-core/src/mltl.rs#L50) (both the AFP's), [`xor_mltl`](src/grammar.rs#L22) |
+| §1 tokens | the token type [`Token`](src/lexer.rs#L12); [`lex_from`](src/lexer.rs#L180) splits text into tokens (longest match, spaces skipped, keywords in [`keyword`](src/lexer.rs#L143), symbols in [`symbol`](src/lexer.rs#L156), numbers above `usize::MAX` rejected) |
+| §2 `atom` … `implication` | one definition per rule: [`atom`](src/grammar.rs#L85), [`unary`](src/grammar.rs#L97), [`until_release`](src/grammar.rs#L111), [`conjunction`](src/grammar.rs#L126), [`exclusive_or`](src/grammar.rs#L137), [`disjunction`](src/grammar.rs#L148), [`implication`](src/grammar.rs#L159), [`formula`](src/grammar.rs#L172) |
+| §2 `interval`, with `a ≤ b` | [`interval`](src/grammar.rs#L73) |
+| §3 `->`, `<->`, `^` | [`implies_mltl`](../mltl-core/src/mltl.rs#L45), [`iff_mltl`](../mltl-core/src/mltl.rs#L50) (both the AFP's), [`xor_mltl`](src/grammar.rs#L22) |
 | "the whole text is one formula" | [`denotes`](src/grammar.rs#L180) |
+| §6 traces, sets syntax | one definition per rule: [`step_at`](src/trace.rs#L53) (with [`names_at`](src/trace.rs#L32) for the names), [`steps_at`](src/trace.rs#L62), [`trace_tokens`](src/trace.rs#L106); the whole text: [`trace_denotes`](src/trace.rs#L120) |
+| §6 traces, CSV | on bytes: [`header`](src/csv.rs#L92), [`row`](src/csv.rs#L111), the whole text: [`csv_trace`](src/csv.rs#L163) |
 
 Each rule definition answers one question: "do tokens `lo` to `hi` form this
 rule, and do they mean formula `f`?" For example, the rule
@@ -62,7 +74,7 @@ below is proved against.
 
 ## Link 2: what is proved
 
-**[`parse`](src/lib.rs#L74)** takes text and returns a formula or an error.
+**[`parse`](src/lib.rs#L80)** takes text and returns a formula or an error.
 Its [guarantee](src/lib.rs#L75) has two parts:
 
 - **Sound:** if it returns `f`, then `denotes(text, f)`.
@@ -76,7 +88,7 @@ Consequences:
 - No text has two readings: `parse` returns at most one formula, and
   completeness says it returns every reading.
 
-**[`print`](src/printer.rs#L895)** returns the formula as text, with
+**[`print`](src/printer.rs#L901)** returns the formula as text, with
 parentheses only where the grammar's levels need them. Its
 [guarantee](src/printer.rs#L898) covers formulas where every interval has
 `a ≤ b` and every atom is a valid name (for example, not `F` or `p q`). For
@@ -85,12 +97,19 @@ gives back the same formula. Formulas outside those two conditions have no
 text in the grammar.
 
 The exact layout (spacing, which parentheses) is a definition,
-[`print_text`](src/printer.rs#L335). You don't need to trust it, because the
+[`print_text`](src/printer.rs#L338). You don't need to trust it, because the
 round trip is what's proved.
 
 **For all code in the crate** except the error wording below, Verus also
 proves termination, no crashes and no arithmetic overflow. Nothing is
 assumed: there is no `assume` and no unverified function.
+
+**Traces.** [`parse_trace`](src/trace.rs#L374) is sound and complete for
+`trace_denotes` in the same way, and
+[`parse_csv`](src/csv.rs#L546) returns exactly `csv_trace`.
+[`print_trace`](src/trace.rs#L702) writes the sets syntax, and its
+[guarantee](src/trace.rs#L703) is the round trip: the text reads back as the
+same steps.
 
 ## Error messages
 
@@ -115,7 +134,7 @@ pipe in a file with one formula per line ([`examples/check.rs`](examples/check.r
 The verified lexer and parser report where they stopped and what they
 expected there, e.g. "a `)` closing the `(` at column 1". `parse` turns that
 into byte positions, and Verus checks that every position is inside the text
-([`error_ok`](src/error.rs#L35)). [`ParseError::render`](src/report.rs#L389)
+([`error_ok`](src/error.rs#L39)). [`ParseError::render`](src/report.rs#L480)
 adds the wording, the help lines and the layout. It is plain Rust and not
 verified, since it only formats: it reads the tokens around the reported
 spot (using the verified lexer) to choose a message, and it runs the parser
@@ -141,8 +160,8 @@ Supporting evidence (not proofs of the guarantees above):
 ## Optional: numbering atoms
 
 Evaluators work on numbered atoms (`Mltl<usize>`).
-[`parse_numbered`](src/lib.rs#L119) parses, then numbers the atoms as in
-GRAMMAR.md §6: `pN` is atom N, and other names get the next free numbers.
+[`parse_numbered`](src/lib.rs#L125) parses, then numbers the atoms as in
+GRAMMAR.md §5: `pN` is atom N, and other names get the next free numbers.
 
 For example, `request & p2 | grant & request` gives `p2` ↦ 2, `request` ↦ 3,
 `grant` ↦ 4. Different names never share a number. So, on a trace where
@@ -151,8 +170,15 @@ and the named one have the same truth value
 ([`lemma_numbering_semantics`](src/numbering.rs#L119)).
 
 For several formulas and traces of one problem, use one
-[`Atoms`](src/atoms.rs#L30) table: a name gets the same number everywhere,
+[`Atoms`](src/atoms.rs#L32) table: a name gets the same number everywhere,
 and `Atoms::print` turns numbered results back into text with the names.
+[`Atoms::parse_trace`](src/atoms.rs#L609) and
+[`Atoms::parse_csv`](src/atoms.rs#L636) read numbered traces. A trace may
+name atoms no formula has; they get numbers too. They can't change any
+formula's truth value
+([`lemma_semantics_own_atoms`](../mltl-core/src/properties.rs#L2661)).
+[`Atoms::print_trace`](src/atoms.rs#L699) prints a numbered trace with the
+names.
 
 Agent context: [agent-docs/modules/mltl-parse.md](../../agent-docs/modules/mltl-parse.md),
 [agent-docs/decisions.md](../../agent-docs/decisions.md) (parser syntax).

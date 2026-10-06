@@ -1,4 +1,4 @@
-//! Tokens and the lexer (GRAMMAR.md §2).
+//! Tokens and the lexer (GRAMMAR.md §1).
 //!
 //! `lex_spec` is the specification: a recursive definition of how text
 //! splits into tokens (longest match; whitespace separates tokens). `lex` is
@@ -28,6 +28,10 @@ pub enum Token<N> {
     RParen,
     LBrack,
     RBrack,
+    /// `{` (traces only)
+    LBrace,
+    /// `}` (traces only)
+    RBrace,
     Comma,
     /// `!`
     Not,
@@ -76,6 +80,8 @@ pub open spec fn token_view(t: Token<Vec<u8>>) -> SpecToken {
         Token::RParen => Token::RParen,
         Token::LBrack => Token::LBrack,
         Token::RBrack => Token::RBrack,
+        Token::LBrace => Token::LBrace,
+        Token::RBrace => Token::RBrace,
         Token::Comma => Token::Comma,
         Token::Not => Token::Not,
         Token::And => Token::And,
@@ -133,7 +139,7 @@ pub open spec fn is_word(w: Seq<u8>, b: Seq<u8>) -> bool {
     w.len() == b.len() && forall|k: int| 0 <= k < w.len() ==> w[k] == b[k]
 }
 
-/// Keywords (GRAMMAR.md §2), or `None` for an ordinary name.
+/// Keywords (GRAMMAR.md §1), or `None` for an ordinary name.
 pub open spec fn keyword(w: Seq<u8>) -> Option<SpecToken> {
     if is_word(w, seq![70u8]) { Some(Token::KwF) }                           // F
     else if is_word(w, seq![71u8]) { Some(Token::KwG) }                      // G
@@ -152,6 +158,8 @@ pub open spec fn symbol(c: u8) -> Option<SpecToken> {
     else if c == 41 { Some(Token::RParen) }   // )
     else if c == 91 { Some(Token::LBrack) }   // [
     else if c == 93 { Some(Token::RBrack) }   // ]
+    else if c == 123 { Some(Token::LBrace) }  // {
+    else if c == 125 { Some(Token::RBrace) }  // }
     else if c == 44 { Some(Token::Comma) }    // ,
     else if c == 33 { Some(Token::Not) }      // !
     else if c == 38 { Some(Token::And) }      // &
@@ -338,6 +346,8 @@ fn exec_symbol(c: u8) -> (r: Option<Token<Vec<u8>>>)
     else if c == 41 { Some(Token::RParen) }
     else if c == 91 { Some(Token::LBrack) }
     else if c == 93 { Some(Token::RBrack) }
+    else if c == 123 { Some(Token::LBrace) }
+    else if c == 125 { Some(Token::RBrace) }
     else if c == 44 { Some(Token::Comma) }
     else if c == 33 { Some(Token::Not) }
     else if c == 38 { Some(Token::And) }

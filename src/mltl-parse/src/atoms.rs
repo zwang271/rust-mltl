@@ -4,7 +4,7 @@
 //! name then gets the same number everywhere, and different names get
 //! different numbers. [`Atoms::print`] turns numbered results (of
 //! evaluators, progression, partitioning, …) back into text with the names.
-//! Numbering follows GRAMMAR.md §6: `pN` is atom N, other names get the
+//! Numbering follows GRAMMAR.md §5: `pN` is atom N, other names get the
 //! next free numbers in order of first appearance.
 use vstd::prelude::*;
 use std::collections::HashSet;
@@ -16,6 +16,8 @@ use crate::parser::*;
 use crate::printer::*;
 use crate::numbering::*;
 use crate::error::*;
+use crate::trace::*;
+use crate::csv::*;
 
 verus! {
 
@@ -47,8 +49,8 @@ pub open spec fn numbered_trace(t: Seq<HashSet<usize>>) -> Seq<Set<usize>> {
     t.map_values(|s: HashSet<usize>| s@)
 }
 
-/// Whether `n` is a name the printer can print (GRAMMAR.md §2).
-fn exec_valid_name(n: &Vec<u8>) -> (r: bool)
+/// Whether `n` is a name the printer can print (GRAMMAR.md §1).
+pub(crate) fn exec_valid_name(n: &Vec<u8>) -> (r: bool)
     ensures
         r == valid_name(n@),
 {
@@ -76,6 +78,36 @@ fn exec_valid_name(n: &Vec<u8>) -> (r: bool)
     let kw = exec_keyword(n.as_slice(), 0, len);
     proof { assert(n@.subrange(0, len as int) =~= n@); }
     kw.is_none()
+}
+
+/// Every name in `steps` is in `s`.
+pub open spec fn steps_in(steps: Seq<Vec<Vec<u8>>>, s: Set<Seq<u8>>) -> bool {
+    forall|i: int, j: int| 0 <= i < steps.len() && 0 <= j < steps[i]@.len() ==> s.contains(#[trigger] steps[i]@[j]@)
+}
+
+/// The sets of a trace given as names (repeats don't matter).
+pub open spec fn trace_sets(ss: SpecSteps) -> Seq<Set<Seq<u8>>> {
+    ss.map_values(|s: Seq<Seq<u8>>| s.to_set())
+}
+
+proof fn lemma_trace_sets(steps: Seq<Vec<Vec<u8>>>)
+    ensures
+        named_trace(steps) == trace_sets(steps_view(steps)),
+{
+    assert(named_trace(steps) =~= trace_sets(steps_view(steps)));
+}
+
+/// Every name of `ss` is in `s`.
+pub open spec fn sets_in(ss: SpecSteps, s: Set<Seq<u8>>) -> bool {
+    forall|i: int, m: int| 0 <= i < ss.len() && 0 <= m < ss[i].len() ==> s.contains(#[trigger] ss[i][m])
+}
+
+/// The names of step `i` of `ss` are exactly the numbers `k < n` in step
+/// `i` of `t`.
+pub open spec fn printed_as(ss: SpecSteps, t: Seq<HashSet<usize>>, n: usize, num: spec_fn(Seq<u8>) -> usize) -> bool {
+    &&& ss.len() == t.len()
+    &&& forall|i: int, k: usize| 0 <= i < t.len() ==>
+        ((#[trigger] t[i]@.contains(k) && k < n) <==> exists|m: int| 0 <= m < ss[i].len() && #[trigger] num(ss[i][m]) == k)
 }
 
 impl Atoms {
@@ -345,12 +377,9 @@ impl Atoms {
         }
     }
 
-    /// A trace given by names: step `i` holds exactly the names in
-    /// `steps[i]`. Returns the numbered trace, which agrees with it on every
-    /// name in the table, so a formula parsed with this table has the same
-    /// truth value on both ([`lemma_numbering_semantics`]).
+    /// [`Atoms::trace`] for names already in the table.
     /// `Err((i, j))`: `steps[i][j]` is not in the table.
-    pub fn trace(&self, steps: &Vec<Vec<Vec<u8>>>) -> (r: Result<Vec<HashSet<usize>>, (usize, usize)>)
+    fn trace_known(&self, steps: &Vec<Vec<Vec<u8>>>) -> (r: Result<Vec<HashSet<usize>>, (usize, usize)>)
         requires
             self.wf(),
         ensures
@@ -448,6 +477,356 @@ impl Atoms {
             }
         }
         Ok(out)
+    }
+
+    /// Number every name in `steps` that is not in the table yet, in reading
+    /// order, as [`Atoms::parse`] would. `Err((i, j, kind))`: numbering
+    /// `steps[i][j]` failed (see [`Atoms::number`]); names before it were added.
+    pub fn add_names(&mut self, steps: &Vec<Vec<Vec<u8>>>) -> (r: Result<(), (usize, usize, ErrorKind)>)
+        requires
+            old(self).wf(),
+        ensures
+            final(self).wf(),
+            final(self).injective(),
+            old(self).grows_to(final(self)),
+            r is Ok ==> steps_in(steps@, final(self).names()),
+            r matches Err((i, j, kind)) ==> i < steps.len() && j < steps@[i as int].len()
+                && (kind is NumberTaken || kind is NumberingFailed),
+    {
+        let ghost names0 = self.names();
+        let ghost num0 = self.num();
+        proof {
+            self.lemma_injective();
+            assert(names0 == old(self).names() && num0 == old(self).num());
+        }
+        let mut i = 0;
+        while i < steps.len()
+            invariant
+                self.wf(), self.injective(),
+                names0.subset_of(self.names()),
+                forall|n: Seq<u8>| #[trigger] names0.contains(n) ==> (self.num())(n) == num0(n),
+                names0 == old(self).names(), num0 == old(self).num(),
+                i <= steps.len(),
+                forall|a: int, b: int| 0 <= a < i && 0 <= b < steps@[a]@.len() ==> self.names().contains(#[trigger] steps@[a]@[b]@),
+            decreases steps.len() - i,
+        {
+            let s = &steps[i];
+            let mut j = 0;
+            while j < s.len()
+                invariant
+                    self.wf(), self.injective(),
+                    names0.subset_of(self.names()),
+                    forall|n: Seq<u8>| #[trigger] names0.contains(n) ==> (self.num())(n) == num0(n),
+                    names0 == old(self).names(), num0 == old(self).num(),
+                    i < steps.len(), s == steps@[i as int], j <= s.len(),
+                    forall|a: int, b: int| 0 <= a < i && 0 <= b < steps@[a]@.len() ==> self.names().contains(#[trigger] steps@[a]@[b]@),
+                    forall|b: int| 0 <= b < j ==> self.names().contains(#[trigger] s@[b]@),
+                decreases s.len() - j,
+            {
+                let ghost names1 = self.names();
+                let ghost num1 = self.num();
+                let f: ExecFormula = Mltl::Prop(copy_vec(&s[j]));
+                match self.number(&f) {
+                    Ok(_) => {
+                        proof {
+                            assert(atoms_mltl(view_f(f)).contains(s@[j as int]@));
+                            assert forall|n: Seq<u8>| #[trigger] names0.contains(n) implies (self.num())(n) == num0(n) by {
+                                assert(names1.contains(n));
+                            }
+                            assert forall|b: int| 0 <= b < j + 1 implies self.names().contains(#[trigger] s@[b]@) by {
+                                if b < j { assert(names1.contains(s@[b]@)); }
+                            }
+                            assert forall|a: int, b: int| 0 <= a < i && 0 <= b < steps@[a]@.len() implies self.names().contains(#[trigger] steps@[a]@[b]@) by {
+                                assert(names1.contains(steps@[a]@[b]@));
+                            }
+                        }
+                    },
+                    Err(kind) => {
+                        proof {
+                            assert forall|n: Seq<u8>| #[trigger] names0.contains(n) implies (self.num())(n) == num0(n) by {
+                                assert(names1.contains(n));
+                            }
+                        }
+                        return Err((i, j, kind));
+                    },
+                }
+                j = j + 1;
+            }
+            proof {
+                assert forall|a: int, b: int| 0 <= a < i + 1 && 0 <= b < steps@[a]@.len() implies self.names().contains(#[trigger] steps@[a]@[b]@) by {
+                    if a == i { assert(steps@[a] == s); }
+                }
+            }
+            i = i + 1;
+        }
+        Ok(())
+    }
+
+    /// A trace given by names: step `i` holds exactly the names in
+    /// `steps[i]`. Names not in the table yet are numbered first
+    /// ([`Atoms::add_names`]). The numbered trace agrees with the named one
+    /// on every name in the table, so a formula parsed with this table has
+    /// the same truth value on both ([`lemma_numbering_semantics`]).
+    pub fn trace(&mut self, steps: &Vec<Vec<Vec<u8>>>) -> (r: Result<Vec<HashSet<usize>>, (usize, usize, ErrorKind)>)
+        requires
+            old(self).wf(),
+        ensures
+            final(self).wf(),
+            final(self).injective(),
+            old(self).grows_to(final(self)),
+            r is Ok ==> steps_in(steps@, final(self).names())
+                && traces_agree(named_trace(steps@), numbered_trace((r->Ok_0)@), final(self).names(), final(self).num()),
+            r matches Err((i, j, kind)) ==> i < steps.len() && j < steps@[i as int].len()
+                && (kind is NumberTaken || kind is NumberingFailed),
+    {
+        self.add_names(steps)?;
+        match self.trace_known(steps) {
+            Ok(t) => Ok(t),
+            Err((i, j)) => {
+                proof { assert(self.names().contains(steps@[i as int]@[j as int]@)); }
+                Err((i, j, ErrorKind::NumberingFailed))
+            },
+        }
+    }
+
+    /// From a numbered or named result to the error of a text: numbering
+    /// errors cover the whole text.
+    fn text_error(kind: ErrorKind, len: usize) -> (r: ParseError)
+        ensures
+            error_ok(r, len as nat),
+            r.kind == kind,
+    {
+        ParseError { kind, at: Span { start: 0, end: len }, related: None }
+    }
+
+    /// Read a trace in the sets syntax (`[{request}, {grant, ok}, {}]`,
+    /// GRAMMAR.md §6) and number it with this table.
+    ///
+    /// - `Ok(t)`: the text denotes a trace whose names are all in the
+    ///   (grown) table, and `t` agrees with it on every name in the table.
+    /// - An error other than [`ErrorKind::NumberTaken`] /
+    ///   [`ErrorKind::NumberingFailed`] means the text is not a trace.
+    pub fn parse_trace(&mut self, text: &[u8]) -> (r: Result<Vec<HashSet<usize>>, ParseError>)
+        requires
+            old(self).wf(),
+        ensures
+            final(self).wf(),
+            final(self).injective(),
+            old(self).grows_to(final(self)),
+            r is Ok ==> exists|ss: SpecSteps| {
+                &&& #[trigger] trace_denotes(text@, ss)
+                &&& sets_in(ss, final(self).names())
+                &&& traces_agree(trace_sets(ss), numbered_trace((r->Ok_0)@), final(self).names(), final(self).num())
+            },
+            r is Err ==> error_ok(r->Err_0, text.len() as nat),
+            r is Err && !(r->Err_0.kind is NumberTaken || r->Err_0.kind is NumberingFailed)
+                ==> forall|ss: SpecSteps| !#[trigger] trace_denotes(text@, ss),
+    {
+        match parse_trace(text) {
+            Ok(steps) => self.number_steps(&steps, text.len()),
+            Err(e) => {
+                proof { self.lemma_injective(); }
+                Err(e)
+            },
+        }
+    }
+
+    /// Read a trace in R2U2's CSV format (GRAMMAR.md §6) and number it with
+    /// this table. As [`Atoms::parse_trace`], for `csv_trace`.
+    pub fn parse_csv(&mut self, text: &[u8]) -> (r: Result<Vec<HashSet<usize>>, ParseError>)
+        requires
+            old(self).wf(),
+        ensures
+            final(self).wf(),
+            final(self).injective(),
+            old(self).grows_to(final(self)),
+            r is Ok ==> exists|ss: SpecSteps| {
+                &&& #[trigger] csv_trace(text@) == Some(ss)
+                &&& sets_in(ss, final(self).names())
+                &&& traces_agree(trace_sets(ss), numbered_trace((r->Ok_0)@), final(self).names(), final(self).num())
+            },
+            r is Err ==> error_ok(r->Err_0, text.len() as nat),
+            r is Err && !(r->Err_0.kind is NumberTaken || r->Err_0.kind is NumberingFailed)
+                ==> csv_trace(text@) is None,
+    {
+        match parse_csv(text) {
+            Ok(steps) => {
+                let r = self.number_steps(&steps, text.len());
+                proof {
+                    if r is Ok { assert(csv_trace(text@) == Some(steps_view(steps@))); }
+                }
+                r
+            },
+            Err(e) => {
+                proof { self.lemma_injective(); }
+                Err(e)
+            },
+        }
+    }
+
+    /// [`Atoms::trace`], stated for the steps' view.
+    fn number_steps(&mut self, steps: &ExecSteps, len: usize) -> (r: Result<Vec<HashSet<usize>>, ParseError>)
+        requires
+            old(self).wf(),
+        ensures
+            final(self).wf(),
+            final(self).injective(),
+            old(self).grows_to(final(self)),
+            r is Ok ==> sets_in(steps_view(steps@), final(self).names())
+                && traces_agree(trace_sets(steps_view(steps@)), numbered_trace((r->Ok_0)@), final(self).names(), final(self).num()),
+            r is Err ==> error_ok(r->Err_0, len as nat)
+                && (r->Err_0.kind is NumberTaken || r->Err_0.kind is NumberingFailed),
+    {
+        match self.trace(steps) {
+            Ok(t) => {
+                proof {
+                    lemma_trace_sets(steps@);
+                    let sv = steps_view(steps@);
+                    assert forall|i: int, m: int| 0 <= i < sv.len() && 0 <= m < sv[i].len() implies self.names().contains(#[trigger] sv[i][m]) by {
+                        assert(sv[i][m] == steps@[i]@[m]@);
+                    }
+                }
+                Ok(t)
+            },
+            Err((_, _, kind)) => Err(Self::text_error(kind, len)),
+        }
+    }
+
+    /// Print a numbered trace in the sets syntax, with this table's names
+    /// (`pk` for numbers without a name), listing only atoms below `n`.
+    /// The text denotes a trace whose steps hold, as numbers, exactly the
+    /// atoms below `n` of `t`'s steps.
+    pub fn print_trace(&self, t: &Vec<HashSet<usize>>, n: usize) -> (r: Vec<u8>)
+        requires
+            self.wf(),
+        ensures
+            exists|ss: SpecSteps| #[trigger] trace_denotes(r@, ss) && printed_as(ss, t@, n, self.num()),
+    {
+        let mut steps: ExecSteps = Vec::new();
+        let mut i = 0;
+        while i < t.len()
+            invariant
+                self.wf(),
+                i <= t.len(),
+                steps@.len() == i,
+                valid_steps(steps_view(steps@)),
+                forall|a: int, x: usize| 0 <= a < i ==>
+                    ((#[trigger] t@[a]@.contains(x) && x < n) <==> exists|m: int| 0 <= m < steps_view(steps@)[a].len() && #[trigger] (self.num())(steps_view(steps@)[a][m]) == x),
+            decreases t.len() - i,
+        {
+            let set = &t[i];
+            let mut names: Vec<Vec<u8>> = Vec::new();
+            let mut k: usize = 0;
+            while k < n
+                invariant
+                    self.wf(),
+                    i < t.len(), set == t@[i as int],
+                    k <= n,
+                    forall|m: int| 0 <= m < names@.len() ==> valid_name(#[trigger] names_view(names@)[m]),
+                    forall|m: int| 0 <= m < names@.len() ==> (#[trigger] (self.num())(names_view(names@)[m])) < k
+                        && set@.contains((self.num())(names_view(names@)[m])),
+                    forall|x: usize| x < k ==> (#[trigger] set@.contains(x) <==> exists|m: int| 0 <= m < names@.len() && #[trigger] (self.num())(names_view(names@)[m]) == x),
+                decreases n - k,
+            {
+                if set.contains(&k) {
+                    let ghost before = names_view(names@);
+                    let nm = self.name_of(k);
+                    let ghost nv = nm@;
+                    names.push(nm);
+                    proof {
+                        assert(names_view(names@) =~= before.push(nv));
+                        assert(names_view(names@)[before.len() as int] == nv);
+                        assert forall|x: usize| x < k + 1 implies (#[trigger] set@.contains(x) <==> exists|m: int| 0 <= m < names@.len() && #[trigger] (self.num())(names_view(names@)[m]) == x) by {
+                            if x < k {
+                                if set@.contains(x) {
+                                    let m = choose|m: int| 0 <= m < before.len() && #[trigger] (self.num())(before[m]) == x;
+                                    assert(names_view(names@)[m] == before[m]);
+                                }
+                                if exists|m: int| 0 <= m < names@.len() && #[trigger] (self.num())(names_view(names@)[m]) == x {
+                                    let m = choose|m: int| 0 <= m < names@.len() && #[trigger] (self.num())(names_view(names@)[m]) == x;
+                                    if m < before.len() { assert(names_view(names@)[m] == before[m]); }
+                                }
+                            } else {
+                                assert((self.num())(names_view(names@)[before.len() as int]) == k);
+                            }
+                        }
+                        assert forall|m: int| 0 <= m < names@.len() implies (#[trigger] (self.num())(names_view(names@)[m])) < k + 1
+                            && set@.contains((self.num())(names_view(names@)[m])) by {
+                            if m < before.len() { assert(names_view(names@)[m] == before[m]); }
+                        }
+                        assert forall|m: int| 0 <= m < names@.len() implies valid_name(#[trigger] names_view(names@)[m]) by {
+                            if m < before.len() { assert(names_view(names@)[m] == before[m]); }
+                        }
+                    }
+                } else {
+                    proof {
+                        assert forall|x: usize| x < k + 1 implies (#[trigger] set@.contains(x) <==> exists|m: int| 0 <= m < names@.len() && #[trigger] (self.num())(names_view(names@)[m]) == x) by {
+                            if x == k && exists|m: int| 0 <= m < names@.len() && #[trigger] (self.num())(names_view(names@)[m]) == x {
+                                let m = choose|m: int| 0 <= m < names@.len() && #[trigger] (self.num())(names_view(names@)[m]) == x;
+                                assert(set@.contains((self.num())(names_view(names@)[m])));
+                            }
+                        }
+                    }
+                }
+                k = k + 1;
+            }
+            let ghost sv0 = steps_view(steps@);
+            let ghost nv = names_view(names@);
+            proof {
+                assert forall|x: usize| (#[trigger] set@.contains(x) && x < n) <==> exists|m: int| 0 <= m < nv.len() && #[trigger] (self.num())(nv[m]) == x by {
+                    if exists|m: int| 0 <= m < nv.len() && #[trigger] (self.num())(nv[m]) == x {
+                        let m = choose|m: int| 0 <= m < nv.len() && #[trigger] (self.num())(nv[m]) == x;
+                        assert((self.num())(nv[m]) < k && set@.contains((self.num())(nv[m])));
+                    }
+                }
+            }
+            steps.push(names);
+            proof {
+                let sv = steps_view(steps@);
+                assert(sv =~= sv0.push(nv));
+                assert forall|a: int, m: int| 0 <= a < sv.len() && 0 <= m < sv[a].len() implies valid_name(#[trigger] sv[a][m]) by {
+                    if a < sv0.len() { assert(sv[a] == sv0[a]); assert(valid_name(sv0[a][m])); }
+                }
+                assert forall|a: int, x: usize| 0 <= a < i + 1 implies
+                    ((#[trigger] t@[a]@.contains(x) && x < n) <==> exists|m: int| 0 <= m < steps_view(steps@)[a].len() && #[trigger] (self.num())(steps_view(steps@)[a][m]) == x) by {
+                    if a < i {
+                        assert(sv[a] == sv0[a]);
+                    } else {
+                        assert(sv[a] == nv);
+                        if t@[a]@.contains(x) && x < n {
+                            assert(set@.contains(x));
+                        }
+                        if exists|m: int| 0 <= m < sv[a].len() && #[trigger] (self.num())(sv[a][m]) == x {
+                            let m = choose|m: int| 0 <= m < sv[a].len() && #[trigger] (self.num())(sv[a][m]) == x;
+                            assert((self.num())(nv[m]) < n && set@.contains((self.num())(nv[m])));
+                        }
+                    }
+                }
+            }
+            proof {
+                assert(forall|a: int, x: usize| 0 <= a < i + 1 ==>
+                    ((#[trigger] t@[a]@.contains(x) && x < n) <==> exists|m: int| 0 <= m < steps_view(steps@)[a].len() && #[trigger] (self.num())(steps_view(steps@)[a][m]) == x));
+            }
+            i = i + 1;
+            proof {
+                assert(forall|a: int, x: usize| 0 <= a < i ==>
+                    ((#[trigger] t@[a]@.contains(x) && x < n) <==> exists|m: int| 0 <= m < steps_view(steps@)[a].len() && #[trigger] (self.num())(steps_view(steps@)[a][m]) == x));
+            }
+        }
+        let r = print_trace(&steps);
+        proof {
+            assert(trace_denotes(r@, steps_view(steps@)));
+            let sv = steps_view(steps@);
+            let tv = t@;
+            assert(sv.len() == tv.len());
+            assert forall|a: int, x: usize| 0 <= a < tv.len() implies
+                ((#[trigger] tv[a]@.contains(x) && x < n) <==> exists|m: int| 0 <= m < sv[a].len() && #[trigger] (self.num())(sv[a][m]) == x) by {
+                assert(0 <= a < i);
+                assert((t@[a]@.contains(x) && x < n) <==> exists|m: int| 0 <= m < steps_view(steps@)[a].len() && #[trigger] (self.num())(steps_view(steps@)[a][m]) == x);
+            }
+            assert(printed_as(sv, tv, n, self.num()));
+        }
+        r
     }
 
     /// A name for atom number `k`: the name in the table with that number

@@ -2626,6 +2626,83 @@ pub proof fn atomics_agree_semantics<A>(pi: Seq<Set<A>>, pi2: Seq<Set<A>>, f: Ml
     }
 }
 
+// ---------------------------------------------------------------------------
+// Only a formula's own atoms matter (no Isabelle counterpart; the AFP's
+// `atomics_agree_semantics` above needs well-defined intervals and traces of
+// length `complen`)
+// ---------------------------------------------------------------------------
+
+/// Same length, and at every step the same truth value for each atom in `ap`.
+pub open spec fn same_on_atoms<A>(pi: Seq<Set<A>>, pi2: Seq<Set<A>>, ap: Set<A>) -> bool {
+    pi.len() == pi2.len()
+    && forall|i: int, p: A| 0 <= i < pi.len() && ap.contains(p) ==> (#[trigger] pi[i].contains(p) <==> pi2[i].contains(p))
+}
+
+proof fn lemma_same_on_atoms_drop<A>(pi: Seq<Set<A>>, pi2: Seq<Set<A>>, ap: Set<A>, sub: Set<A>, k: nat)
+    requires
+        same_on_atoms(pi, pi2, ap),
+        sub.subset_of(ap),
+    ensures
+        same_on_atoms(drop(pi, k), drop(pi2, k), sub),
+{
+    lemma_drop_len(pi, k);
+    lemma_drop_len(pi2, k);
+    assert forall|i: int, p: A| 0 <= i < drop(pi, k).len() && sub.contains(p)
+        implies (#[trigger] drop(pi, k)[i].contains(p) <==> drop(pi2, k)[i].contains(p)) by {
+        assert(drop(pi, k)[i] == pi[i + k]);
+        assert(drop(pi2, k)[i] == pi2[i + k]);
+        assert(pi[i + k].contains(p) <==> pi2[i + k].contains(p));
+    }
+}
+
+/// **Only a formula's own atoms matter.** On two traces of the same length
+/// that agree on the atoms of `f` at every step, `f` has the same truth value.
+/// So atoms of a trace that `f` doesn't use can't change the result.
+pub proof fn lemma_semantics_own_atoms<A>(pi: Seq<Set<A>>, pi2: Seq<Set<A>>, f: Mltl<A>)
+    requires
+        same_on_atoms(pi, pi2, atoms_mltl(f)),
+    ensures
+        semantics_mltl(pi, f) == semantics_mltl(pi2, f),
+    decreases f,
+{
+    match f {
+        Mltl::True | Mltl::False => {},
+        Mltl::Prop(p) => {
+            if pi.len() > 0 {
+                assert(pi[0].contains(p) <==> pi2[0].contains(p));
+            }
+        },
+        Mltl::Not(a) => {
+            lemma_semantics_own_atoms(pi, pi2, *a);
+        },
+        Mltl::And(a, b) | Mltl::Or(a, b) => {
+            lemma_same_on_atoms_drop(pi, pi2, atoms_mltl(f), atoms_mltl(*a), 0);
+            lemma_same_on_atoms_drop(pi, pi2, atoms_mltl(f), atoms_mltl(*b), 0);
+            lemma_drop_zero(pi);
+            lemma_drop_zero(pi2);
+            lemma_semantics_own_atoms(pi, pi2, *a);
+            lemma_semantics_own_atoms(pi, pi2, *b);
+        },
+        Mltl::Future(x, y, a) | Mltl::Global(x, y, a) => {
+            assert forall|k: nat| #![trigger drop(pi, k)] #![trigger drop(pi2, k)] semantics_mltl(drop(pi, k), *a) == semantics_mltl(drop(pi2, k), *a) by {
+                lemma_same_on_atoms_drop(pi, pi2, atoms_mltl(f), atoms_mltl(*a), k);
+                lemma_semantics_own_atoms(drop(pi, k), drop(pi2, k), *a);
+            }
+            assert(semantics_mltl(pi, f) == semantics_mltl(pi2, f));
+        },
+        Mltl::Until(a, x, y, b) | Mltl::Release(a, x, y, b) => {
+            assert forall|k: nat| #![trigger drop(pi, k)] #![trigger drop(pi2, k)] semantics_mltl(drop(pi, k), *a) == semantics_mltl(drop(pi2, k), *a)
+                && semantics_mltl(drop(pi, k), *b) == semantics_mltl(drop(pi2, k), *b) by {
+                lemma_same_on_atoms_drop(pi, pi2, atoms_mltl(f), atoms_mltl(*a), k);
+                lemma_same_on_atoms_drop(pi, pi2, atoms_mltl(f), atoms_mltl(*b), k);
+                lemma_semantics_own_atoms(drop(pi, k), drop(pi2, k), *a);
+                lemma_semantics_own_atoms(drop(pi, k), drop(pi2, k), *b);
+            }
+            assert(semantics_mltl(pi, f) == semantics_mltl(pi2, f));
+        },
+    }
+}
+
 /// AFP's `complen_property` (Mission_Time_LTL_Formula_Progression), proved
 /// here directly from `atomics_agree_semantics` instead of via formula
 /// progression: states after the computation length never change whether

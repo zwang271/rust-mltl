@@ -12,7 +12,7 @@ use crate::parser::*;
 
 verus! {
 
-/// The grammar level of a formula's outermost operator (GRAMMAR.md §3):
+/// The grammar level of a formula's outermost operator (GRAMMAR.md §2):
 /// 1 atom, 2 unary, 3 until/release, 4 conjunction, 6 disjunction.
 pub open spec fn level(f: SpecFormula) -> nat {
     match f {
@@ -297,6 +297,8 @@ pub open spec fn token_text(t: SpecToken) -> Seq<u8> {
         Token::RParen => seq![41u8],
         Token::LBrack => seq![91u8],
         Token::RBrack => seq![93u8],
+        Token::LBrace => seq![123u8],
+        Token::RBrace => seq![125u8],
         Token::Comma => seq![44u8],
         Token::Not => seq![33u8],
         Token::And => seq![38u8],
@@ -307,11 +309,12 @@ pub open spec fn token_text(t: SpecToken) -> Seq<u8> {
     }
 }
 
-/// No space between `t1` and `t2`: after `(`, `[`, `,`, `!` and before `)`,
-/// `]`, `,`, `[`. Everywhere else one space. So `F[0,3] p`, `!(p & q)`.
+/// No space between `t1` and `t2`: after `(`, `[`, `{`, `!`, after `,`
+/// before a number, and before `)`, `]`, `}`, `,`, `[`. Everywhere else one
+/// space. So `F[0,3] p`, `!(p & q)`, `[{a, b}, {}]`.
 pub open spec fn glue(t1: SpecToken, t2: SpecToken) -> bool {
-    t1 is LParen || t1 is LBrack || t1 is Comma || t1 is Not
-        || t2 is RParen || t2 is RBrack || t2 is Comma || t2 is LBrack
+    t1 is LParen || t1 is LBrack || t1 is LBrace || t1 is Not || (t1 is Comma && t2 is Num)
+        || t2 is RParen || t2 is RBrack || t2 is RBrace || t2 is Comma || t2 is LBrack
 }
 
 pub open spec fn separator(t1: SpecToken, t2: SpecToken) -> Seq<u8> {
@@ -486,7 +489,7 @@ proof fn lemma_lex_token(s: Seq<u8>, i: nat, t: SpecToken)
 }
 
 /// The lexer reads `render(ts)`, appearing as the end of `s`, as `ts`.
-proof fn lemma_lex_render(s: Seq<u8>, i: nat, ts: Seq<SpecToken>)
+pub(crate) proof fn lemma_lex_render(s: Seq<u8>, i: nat, ts: Seq<SpecToken>)
     requires
         valid_tokens(ts),
         i <= s.len(),
@@ -545,7 +548,7 @@ proof fn lemma_render_first(ts: Seq<SpecToken>)
     ensures
         render(ts).len() >= 1,
         render(ts)[0] == token_text(ts[0])[0],
-        (ts[0] is RParen || ts[0] is RBrack || ts[0] is Comma || ts[0] is LBrack)
+        (ts[0] is RParen || ts[0] is RBrack || ts[0] is RBrace || ts[0] is Comma || ts[0] is LBrack)
             ==> !(is_word_char(render(ts)[0]) || is_digit(render(ts)[0])),
     decreases ts.len(),
 {
@@ -569,7 +572,7 @@ proof fn lemma_token_text_len(t: SpecToken)
 // The round trip
 // ---------------------------------------------------------------------------
 
-proof fn lemma_valid_concat(x: Seq<SpecToken>, y: Seq<SpecToken>)
+pub(crate) proof fn lemma_valid_concat(x: Seq<SpecToken>, y: Seq<SpecToken>)
     requires
         valid_tokens(x),
         valid_tokens(y),
@@ -821,6 +824,8 @@ fn push_text(t: &Token<Vec<u8>>, out: &mut Vec<u8>)
         Token::RParen => { out.push(41); proof { assert(out@ =~= before + token_text(token_view(*t))); } },
         Token::LBrack => { out.push(91); proof { assert(out@ =~= before + token_text(token_view(*t))); } },
         Token::RBrack => { out.push(93); proof { assert(out@ =~= before + token_text(token_view(*t))); } },
+        Token::LBrace => { out.push(123); proof { assert(out@ =~= before + token_text(token_view(*t))); } },
+        Token::RBrace => { out.push(125); proof { assert(out@ =~= before + token_text(token_view(*t))); } },
         Token::Comma => { out.push(44); proof { assert(out@ =~= before + token_text(token_view(*t))); } },
         Token::Not => { out.push(33); proof { assert(out@ =~= before + token_text(token_view(*t))); } },
         Token::And => { out.push(38); proof { assert(out@ =~= before + token_text(token_view(*t))); } },
@@ -835,13 +840,14 @@ fn exec_glue(t1: &Token<Vec<u8>>, t2: &Token<Vec<u8>>) -> (r: bool)
     ensures
         r == glue(token_view(*t1), token_view(*t2)),
 {
-    let a = match t1 { Token::LParen | Token::LBrack | Token::Comma | Token::Not => true, _ => false };
-    let b = match t2 { Token::RParen | Token::RBrack | Token::Comma | Token::LBrack => true, _ => false };
-    a || b
+    let a = match t1 { Token::LParen | Token::LBrack | Token::LBrace | Token::Not => true, _ => false };
+    let c = matches!(t1, Token::Comma) && matches!(t2, Token::Num(_));
+    let b = match t2 { Token::RParen | Token::RBrack | Token::RBrace | Token::Comma | Token::LBrack => true, _ => false };
+    a || c || b
 }
 
 /// The text of a token sequence: exactly `render`.
-fn exec_render(ts: &Vec<Token<Vec<u8>>>) -> (r: Vec<u8>)
+pub(crate) fn exec_render(ts: &Vec<Token<Vec<u8>>>) -> (r: Vec<u8>)
     ensures
         r@ == render(tokens_view(ts@)),
 {

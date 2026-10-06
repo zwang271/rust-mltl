@@ -1,4 +1,4 @@
-//! Runtime checks of the verified parser against the examples in GRAMMAR.md §5.
+//! Runtime checks of the verified parser against the examples in GRAMMAR.md §4.
 use mltl_core::mltl::Mltl;
 use mltl_parse::parse_str;
 
@@ -111,7 +111,7 @@ fn round_trip_random() {
     assert_eq!(String::from_utf8(print(&f)).unwrap(), "p & q & r | !(a U[0,2] b)");
 }
 
-/// GRAMMAR.md §6: `p2` is atom 2, then `request` 3 and `grant` 4.
+/// GRAMMAR.md §5: `p2` is atom 2, then `request` 3 and `grant` 4.
 #[test]
 fn numbering_example() {
     let (g, table) = parse_numbered(b"request & p2 | grant & request").unwrap();

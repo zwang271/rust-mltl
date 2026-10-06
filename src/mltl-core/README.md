@@ -16,11 +16,11 @@ well-defined intervals, computation length, ...), all proved in Verus.
 
 ## Executable functions
 
-- **[`convert_nnf`](src/properties.rs#L2659)** pushes negations down to the
+- **[`convert_nnf`](src/properties.rs#L2736)** pushes negations down to the
   atoms. Its `ensures`: the result is Isabelle's `convert_nnf f`, it is in
   negation normal form ([`is_nnf`](src/properties.rs#L642)), and for well-defined
   intervals it means the same as `f` on every trace.
-- **[`convert_bnf`](src/properties.rs#L2725)** rewrites into `True`/`Prop`/`Not`/`And`/`Until`
+- **[`convert_bnf`](src/properties.rs#L2802)** rewrites into `True`/`Prop`/`Not`/`And`/`Until`
   only. Its `ensures`: the result is Isabelle's `convert_bnf f`, it is in that
   form ([`is_bnf`](src/properties.rs#L1307)), has the same computation length, and for
   well-defined intervals stays well-defined and means the same as `f`.
@@ -39,7 +39,7 @@ and [`complen_mltl`](src/properties.rs#L758) (computation length).
   It trivially implies the formula-progression corollary `complen_property`
   (extending a trace of at least `complen_mltl` steps never changes the
   verdict), since a trace and any extension of it agree on their first
-  steps; [`complen_property_via_atomics`](src/properties.rs#L2635) is that
+  steps; [`complen_property_via_atomics`](src/properties.rs#L2712) is that
   short proof.
 
 ## Sources

@@ -1,4 +1,4 @@
-//! From names to atom numbers (GRAMMAR.md §6).
+//! From names to atom numbers (GRAMMAR.md §5).
 //!
 //! `pN` (N written without leading zeros) is atom N. Every other name gets
 //! the next free number, in order of first appearance, starting after the
@@ -810,7 +810,7 @@ proof fn lemma_injective(f: SpecFormula, t: SpecTable, lo: nat, next: nat)
     }
 }
 
-/// Number the atoms of `f` (GRAMMAR.md §6). Returns the numbered formula
+/// Number the atoms of `f` (GRAMMAR.md §5). Returns the numbered formula
 /// and the table of non-`pN` names. Guaranteed: the result is `f` with each
 /// atom replaced by its number, `pN` atoms get N, and different atoms get
 /// different numbers. `None` if some `pN` has N ≥ usize::MAX, or if the

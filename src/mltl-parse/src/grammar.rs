@@ -1,4 +1,4 @@
-//! The grammar of GRAMMAR.md §3–4 as a specification.
+//! The grammar of GRAMMAR.md §2–3 as a specification.
 //!
 //! Each rule is a relation `rule(ts, lo, hi, f)`: "the tokens `ts[lo..hi]`
 //! form a <rule> that means the formula `f`". The rules are written in the
@@ -8,7 +8,7 @@
 //!
 //! becomes "either an until_release, or a conjunction, then `&`, then an
 //! until_release", which groups `a & b & c` as `(a & b) & c`. The meaning of
-//! each form (GRAMMAR.md §4) is built in: `a -> b` relates to
+//! each form (GRAMMAR.md §3) is built in: `a -> b` relates to
 //! `implies_mltl(a, b)`, and so on.
 use vstd::prelude::*;
 use mltl_core::mltl::*;
@@ -18,7 +18,7 @@ verus! {
 
 pub type SpecFormula = Mltl<Seq<u8>>;
 
-/// `a ^ b` (GRAMMAR.md §4): one or the other, not both.
+/// `a ^ b` (GRAMMAR.md §3): one or the other, not both.
 pub open spec fn xor_mltl<A>(a: Mltl<A>, b: Mltl<A>) -> Mltl<A> {
     Mltl::Or(
         Box::new(Mltl::And(Box::new(a), Box::new(Mltl::Not(Box::new(b))))),
@@ -69,7 +69,7 @@ pub open spec fn span(ts: Seq<SpecToken>, lo: int, hi: int) -> bool {
 }
 
 /// `interval = "[" number "," number "]"` starting at `k`, with `a ≤ b`
-/// (GRAMMAR.md §3, side condition).
+/// (GRAMMAR.md §2, side condition).
 pub open spec fn interval(ts: Seq<SpecToken>, k: int, a: usize, b: usize) -> bool {
     &&& 0 <= k && k + 5 <= ts.len()
     &&& ts[k] is LBrack

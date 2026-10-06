@@ -42,7 +42,14 @@ fn traces() {
     assert!(t[0].contains(&0) && !t[0].contains(&1));
     assert!(t[1].contains(&0) && t[1].contains(&1));
     assert!(t[2].is_empty());
-    assert_eq!(atoms.trace(&names(&[&["req"], &["typo"]])).unwrap_err(), (1, 0));
+    // a name no formula has is numbered, not rejected
+    let t = atoms.trace(&names(&[&["req"], &["other"]])).unwrap();
+    assert_eq!(atoms.atom(&b"other".to_vec()), Some(2));
+    assert!(t[1].contains(&2));
+    // ... unless it is a `pN` that may clash with a named atom
+    let (i, j, kind) = atoms.trace(&names(&[&[], &["p5"]])).unwrap_err();
+    assert_eq!((i, j), (1, 0));
+    assert!(matches!(kind, ErrorKind::NumberTaken));
 }
 
 #[test]
