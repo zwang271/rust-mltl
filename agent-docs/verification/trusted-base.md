@@ -41,7 +41,7 @@ parser stopped; a bug there shows as a wrong or panicking message. Also
 `src/mltl-parse/examples/check.rs` (CLI).
 
 Unverified front door: `src/mltl` (plain Rust crate, D47). Each fn is one
-call to a verified fn plus `&str`/`String` conversion; `Atoms::print`'s
+call to a verified fn plus `&str`/`String` conversion; `Context::display`'s
 `String::from_utf8(..).expect` relies on the printer emitting ASCII (true
 by construction; a violation would panic, not mislead). Its claims are the
 callees' `ensures`; nothing verified calls it. `#[derive(Debug)]` on

@@ -2,8 +2,9 @@
 
 Verified parser, printer and atom numbering (goal 6). Spec for humans:
 `src/mltl-parse/GRAMMAR.md` (owner-reviewed; keep it and `grammar.rs` in
-lockstep, D10). VERIFIED 2026-10-04: 156 items, 0 errors, nothing assumed;
-`cargo test -p mltl-parse --release`: all pass (incl. `tests/atoms.rs`).
+lockstep, D10). VERIFIED 2026-10-05 (Verus 0.2026.09.27.3cf1832): 226 items, 0 errors,
+nothing assumed; `cargo test -p mltl-parse --release`: all pass (incl.
+`tests/atoms.rs`, `tests/traces.rs`).
 
 ## Files
 - `lexer.rs`: `Token<N>` (N = `Vec<u8>` exec / `Seq<u8>` spec), spec
@@ -25,8 +26,13 @@ lockstep, D10). VERIFIED 2026-10-04: 156 items, 0 errors, nothing assumed;
   fields + closed specs `names()`, `num()`, `wf()`; open `injective()`,
   `grows_to()`. `number`/`parse` extend the table (reusing `assign`; numbers
   of old names kept), `atom` (name → number, `None` if not in the table),
-  `trace` (`ensures traces_agree(named_trace(steps), …, names(), num())`, so
-  `lemma_numbering_semantics` applies), `name` (number → name: the table's
+  `add_names` (numbers the trace's new names in reading order by calling
+  `number` on `Prop(name)`), `trace` (now `&mut self`: `add_names`, then
+  the old lookup; `ensures steps_in(..) && traces_agree(named_trace(steps),
+  …, names(), num())`, so `lemma_numbering_semantics` applies),
+  `parse_trace` / `parse_csv` (text → numbered trace; `exists ss` with the
+  denotation, `sets_in`, `traces_agree`), `print_trace(t, n)` (only atoms
+  `< n`; `printed_as`), `name` (number → name: the table's
   name if valid, else `pN`; `map_atoms(name(g), num()) == g`), `print`.
   `pN` vs. names: invariant "pN < lo ≤ every name's number", so a `pN` with
   N ≥ lo after the first name is rejected (`ErrorKind::NumberTaken`); with
@@ -35,6 +41,24 @@ lockstep, D10). VERIFIED 2026-10-04: 156 items, 0 errors, nothing assumed;
   "parsed names are `valid_name`" exists; would be a nice small proof).
   Runtime tests: `tests/atoms.rs`. Uses vstd's finite `Set` + `Seq::to_set`
   (`Set::new` now returns `Option<Set>` in this vstd).
+- `trace.rs` (2026-10-05, D52): traces in the sets syntax. Spec is
+  functional, one fn per GRAMMAR.md §6 rule, read left to right:
+  `names_at`, `step_at`, `steps_at` (each returns the names and the token
+  position after the rule), `trace_tokens`, `trace_denotes(text, steps)`.
+  Steps are `Seq<Seq<Seq<u8>>>` (names as written, repeats kept; the set is
+  `trace_sets`). Exec `parse_trace` (sound + complete, error at the token
+  where it stopped, `TraceExpected`), `print_trace` with
+  `lemma_trace_round_trip` (reuses the formula printer's `render` /
+  `lemma_lex_render`). Tokens `{` `}` were added to the shared lexer
+  (formulas reject them in the grammar); `glue` changed so traces print as
+  `[{a, b}, {}]` (no space after `,` only before a number, so formula text
+  is unchanged).
+- `csv.rs` (2026-10-05, D52): R2U2 CSV traces, spec on bytes: `split`
+  (from the end, matches a left-to-right loop), `trim`, `strip_cr`,
+  `lines`, `cells`, `header` (`#`, valid distinct names), `row`,
+  `true_names`, `body` (from the end; blank lines skipped), `first_line`,
+  `csv_trace`. Exec `parse_csv` (sound + complete; errors carry the byte
+  span of the offending line, `CsvError`).
 - `afp_binding.rs`: the 4 AFP binding examples, at token level.
 - `lib.rs`: `parse`, `parse_str`, `parse_numbered`, all returning
   `Result<_, ParseError>` (D42).
@@ -75,6 +99,14 @@ lockstep, D10). VERIFIED 2026-10-04: 156 items, 0 errors, nothing assumed;
   refer to the same term.
 - Concrete examples: unfold printer fns with `reveal_with_fuel(.., 8)`;
   `by (compute)` on the text printer hit "maximum recursion depth".
+
+- Loops forget everything not in their invariant: in `csv.rs` facts like
+  `tv == trim(l@)` had to be repeated in each loop's invariant.
+- An outer-loop invariant that a matching `assert forall` had just proved
+  still failed "at end of loop body" (`Atoms::print_trace`); asserting the
+  invariant's exact text once before and once after `i = i + 1` fixed it
+  (trigger instantiation). Same trick for the final `printed_as`.
+- `std::mem::replace` has no vstd spec: push the value, then reassign.
 
 ## Known limits / open
 - Longest match is final (owner, 2026-10-03): libmltl's unspaced `p0U[0,2]`

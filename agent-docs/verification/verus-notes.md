@@ -187,6 +187,19 @@ Practical knowledge about running Verus here. Add gotchas as you hit them
 - **Importing proof fns by name breaks plain `cargo build`** (they are
   erased): `use crate::m::{some_lemma}` → E0432 outside Verus. Guard it with
   `#[cfg(verus_only)]` (glob imports are fine unguarded).
+- **verus-analyzer "requires Rust 1.98.1 … not installed" popup is a false
+  alarm** (extension 0.3.269, 2026-10-05): it reads the `Toolchain:` line of
+  `verus --version`, which ends in "(overridden by environment variable
+  RUSTUP_TOOLCHAIN)", and compares that whole line with `rustup toolchain
+  list`. Then it reports a toolchain as missing even though it is installed.
+  Ignore it.
+- **Plain-build warnings** (2026-10-05): each verified crate's `lib.rs` has
+  `#![cfg_attr(not(verus_only), allow(unused_imports, unused_variables,
+  dead_code, while_true, non_shorthand_field_patterns))]`. Erased proof code
+  made ~275 false warnings (proof-only imports/params, ghost fields, Verus's
+  `while true`, rewritten struct patterns). Verus runs still report them.
+  Cargo already hides warnings from git/crates.io deps; path deps (e.g.
+  `example/`) show them. Add the line to any new verified crate.
 - **`return` inside a `while`** is fine; the function's `ensures` is checked
   at the return (`formula_progression_alt`).
 

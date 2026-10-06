@@ -63,6 +63,54 @@ for cross-references; give new entries the next free number (next: D56).
   (`F[0,9]<3,3,3>`) in the grammar: owner doesn't want other tools to
   accept it; revisit (maybe a separate grammar) after using the helpers.
   Also the natural base for the website (D44) and Python (D41).
+- **D51 — Front door wraps everything, SAT included by default** (owner,
+  2026-10-05). WEST, SAT and R2U2 get front-door wrappers. SAT is a normal
+  dependency (no cargo feature); without CaDiCaL the front door returns a
+  clear "CaDiCaL not found" error, never a panic (today the glue silently
+  maps a failed spawn to `Unknown`).
+- **D52 — Trace text syntax: sets of names, plus R2U2 CSV** (owner,
+  2026-10-05). Main syntax: one set of true atom names per step,
+  `{request}, {grant}, {}`; `{}` means every atom false. Files may also use
+  R2U2's CSV (`# a,b` header, then one `0,1` row per step). Both go in
+  `src/mltl-parse/GRAMMAR.md` §6 (agreed 2026-10-05; GRAMMAR.md trimmed to
+  ~200 lines the same day at the owner's request, keeping the Crafting
+  Interpreters link) and get verified parsers (built 2026-10-05) into the same numbered trace, so no
+  untrusted parser returns. Owner's details: brackets around the whole
+  trace (`[{a}, {}]`; may revert later), empty trace is exactly `[]`,
+  repeated names in a step allowed, no trailing commas; printer writes the
+  sets form with a proved round trip. Names no formula uses are numbered
+  (§5 rules), not rejected: checking a formula then gives a *warning*
+  listing them ("not used in the formula and don't affect the result"), so
+  one trace can serve many formulas; backed by a lemma that semantics
+  depends only on `atoms_mltl` (`lemma_semantics_own_atoms`, proved).
+  `Atoms::trace` now numbers unknown names instead of rejecting them.
+- **D54 — Front door: `Context`, methods named for what they read** (owner,
+  2026-10-05). `mltl::Atoms` → `mltl::Context`; `parse` → `formula`,
+  `parse_trace` → `trace`, `parse_csv` → `csv`, old `trace` (name lists) →
+  `trace_from_names`; examples use `cx`. Reason: `atoms.parse(..)` read as if
+  atoms parse. The name table stays an explicit object (owner: the
+  name↔number map is widely used, so users should hold it). Rejected for
+  now: hiding the table (formulas/traces carry names, `eval` aligns them),
+  which needs new verified renumbering glue. The verified
+  `mltl_parse::Atoms` keeps its name and methods.
+  Same day: `print` / `print_trace` → one `display(&x)` returning a
+  `fmt::Display` value (Rust's `Path::display` idiom; `print` suggested
+  writing to stdout). Rejected: `formula_text`/`trace_text`, `text`, `show`.
+  Same day: parsed formulas keep their text (`Parsed`), so `display` shows
+  what the user typed. Rejected: printing `!a | b` as `a -> b` (can't tell
+  typed `!a | b` apart), a richer verified surface AST (real Verus work,
+  still normalizes spacing), adding `->` to `Mltl` (every algorithm and
+  proof changes, diverges from AFP).
+  Same day, reversed in part: text readers are `parse_formula`,
+  `parse_trace`, `parse_csv`; plain `trace` builds from name lists (owner:
+  `trace` should take data, text input says `parse`). Rejected:
+  `trace_from_str` / `trace_from_csv`.
+- **D53 — WEST output: raw WEST format with a column header** (owner,
+  2026-10-05). `# request,grant` then WEST's `0s,s1,...` lines, one column
+  per atom number (unused `pN` columns included). Rejected: a named form
+  where `{}` means "anything": owner, "HIGHLY confusing", since in a trace
+  `{}` means nothing is true. Never reuse trace notation with a different
+  meaning.
 
 ## Scope and order
 

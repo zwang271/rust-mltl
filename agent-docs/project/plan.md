@@ -133,6 +133,7 @@ T8.4 done: LOAD/NOT/AND (with completeness), UNTIL (soundness); T8.5 soundness p
   (`mltl_eval_bottom_up_bits`, `BitTrace::from_sets`). ~4× faster verified on
   the heavy benchmark; prototype shows ~6× is reachable. Lessons in
   `modules/mltl-eval.md`.
-- Possible next (owner's call): tune the verified table/next-array code
-  (`vec![x; n]`, fewer pushes) to close the 1.8× gap to the prototype; a
-  faster verified `from_sets`.
+- **T10.5 (next, owner 2026-10-05: "we should do this soon")**: tune the
+  verified table/next-array code (`vec![x; n]`, fewer pushes) to close the
+  1.8× gap to the prototype; also a faster verified `from_sets` (97 ms vs
+  prototype 18 ms per 1M steps), which `mltl::eval` now pays on every call.
