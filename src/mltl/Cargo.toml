@@ -2,7 +2,7 @@
 name = "mltl"
 version.workspace = true
 edition.workspace = true
-description = "Front door to the verified MLTL crates: parse, evaluate, progress, partition, print"
+description = "Front door to the verified MLTL crates: parse, evaluate, progress, partition, WEST, SAT, monitor, print"
 
 [dependencies]
 mltl-core = { path = "../mltl-core" }
@@ -10,6 +10,9 @@ mltl-parse = { path = "../mltl-parse" }
 mltl-eval = { path = "../mltl-eval" }
 formula_progression = { path = "../formula_progression" }
 language_partitioning = { path = "../language_partitioning" }
+west = { path = "../west" }
+mltl-sat = { path = "../mltl-sat" }
+r2u2 = { path = "../r2u2" }
 
 [lints]
 workspace = true

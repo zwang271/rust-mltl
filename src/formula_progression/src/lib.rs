@@ -15,21 +15,21 @@
 //! use formula_progression::algorithm::formula_progression;
 //! use mltl_core::mltl::Mltl;
 //!
-//! let mut atoms = mltl::Atoms::new();
-//! let f = atoms.parse("G[0,3] p")?;
+//! let mut cx = mltl::Context::new();
+//! let f = cx.parse_formula("G[0,3] p")?;
 //!
 //! // After a state where `p` holds, three more `p` steps are needed.
-//! let t = atoms.trace([["p"]])?;
-//! assert_eq!(atoms.print(&prog(&f, &t)), "G[0,2] p");
+//! let t = cx.trace([["p"]])?;
+//! assert_eq!(cx.display(&prog(&f, &t)).to_string(), "G[0,2] p");
 //!
 //! // After a state where `p` fails, the verdict is final: False.
-//! let t = atoms.trace([vec!["p"], vec![]])?;
+//! let t = cx.trace([vec!["p"], vec![]])?;
 //! assert!(matches!(prog(&f, &t), Mltl::False));
 //!
 //! // The AFP algorithm without simplification gives an equivalent but
 //! // larger formula.
-//! let g = formula_progression(&f, &atoms.trace([["p"]])?);
-//! assert_eq!(atoms.print(&g), "!(!true | F[0,2] !p)");
+//! let g = formula_progression(&f, &cx.trace([["p"]])?);
+//! assert_eq!(cx.display(&g).to_string(), "!(!true | F[0,2] !p)");
 //! # Ok::<(), mltl::Error>(())
 //! ```
 // A plain `cargo build` erases proof code, so proof-only imports, parameters

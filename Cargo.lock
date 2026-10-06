@@ -94,6 +94,9 @@ dependencies = [
  "mltl-core",
  "mltl-eval",
  "mltl-parse",
+ "mltl-sat",
+ "r2u2",
+ "west",
 ]
 
 [[package]]
@@ -124,6 +127,7 @@ dependencies = [
 name = "mltl-sat"
 version = "0.1.0"
 dependencies = [
+ "mltl",
  "mltl-core",
  "mltl-eval",
  "mltl-parse",
@@ -160,6 +164,7 @@ dependencies = [
 name = "r2u2"
 version = "0.1.0"
 dependencies = [
+ "mltl",
  "mltl-core",
  "mltl-eval",
  "mltl-parse",
@@ -269,6 +274,7 @@ dependencies = [
 name = "west"
 version = "0.1.0"
 dependencies = [
+ "mltl",
  "mltl-core",
  "mltl-eval",
  "mltl-parse",

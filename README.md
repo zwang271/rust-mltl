@@ -26,7 +26,7 @@ monitor — so the code that runs is the code that is verified.
 
 [`src/mltl`](src/mltl/README.md) is the one crate to import for text-level
 use (formulas and traces as text in, results as text out); it covers
-evaluation, progression and partitioning so far.
+every algorithm above.
 
 ## Layout
 

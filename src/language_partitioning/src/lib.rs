@@ -14,12 +14,12 @@
 //! use language_partitioning::exec::LP_mltl;
 //! use language_partitioning::splits::{with_compositions, with_width};
 //!
-//! let mut atoms = mltl::Atoms::new();
-//! let f = atoms.parse("F[0,8] x")?;
+//! let mut cx = mltl::Context::new();
+//! let f = cx.parse_formula("F[0,8] x")?;
 //!
 //! // Split [0,8] into three blocks of 3 steps: x first holds in block 1, 2 or 3.
 //! let ext = with_compositions(&f, &vec![vec![3, 3, 3]]).unwrap();
-//! let parts: Vec<String> = LP_mltl(&ext, 1).iter().map(|g| atoms.print(g)).collect();
+//! let parts: Vec<String> = LP_mltl(&ext, 1).iter().map(|g| cx.display(g).to_string()).collect();
 //! assert_eq!(parts, ["F[0,2] x", "G[0,2] !x & F[3,5] x", "G[0,5] !x & F[6,8] x"]);
 //!
 //! // The same split, as blocks of width 3 on every interval.

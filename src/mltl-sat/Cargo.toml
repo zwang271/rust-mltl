@@ -17,4 +17,6 @@ verify = true
 workspace = true
 
 [dev-dependencies]
+# Doc examples parse their formulas with the front-door crate.
+mltl = { path = "../mltl" }
 mltl-parse = { path = "../mltl-parse" }

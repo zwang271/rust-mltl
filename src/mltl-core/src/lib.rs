@@ -6,9 +6,9 @@
 //! of [`properties`]):
 //!
 //! ```text
-//! let mut atoms = mltl::Atoms::new();
-//! let f = atoms.parse("!(p U[0,3] q)")?;
-//! assert_eq!(atoms.print(&mltl::nnf(&f)), "!p R[0,3] !q");
+//! let mut cx = mltl::Context::new();
+//! let f = cx.parse_formula("!(p U[0,3] q)")?;
+//! assert_eq!(cx.display(&mltl::nnf(&f)).to_string(), "!p R[0,3] !q");
 //! ```
 // A plain `cargo build` erases proof code, so proof-only imports, parameters
 // and fields look unused. Verus runs (`cfg(verus_only)`) still report them.

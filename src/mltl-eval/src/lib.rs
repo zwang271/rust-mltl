@@ -9,9 +9,9 @@
 //! ```
 //! use mltl_eval::{mltl_eval, mltl_eval_bottom_up};
 //!
-//! let mut atoms = mltl::Atoms::new();
-//! let f = atoms.parse("G[0,2] (request -> F[0,1] grant)")?;
-//! let trace = atoms.trace([vec!["request"], vec!["grant"], vec!["request"], vec![]])?;
+//! let mut cx = mltl::Context::new();
+//! let f = cx.parse_formula("G[0,2] (request -> F[0,1] grant)")?;
+//! let trace = cx.trace([vec!["request"], vec!["grant"], vec!["request"], vec![]])?;
 //!
 //! assert!(!mltl_eval(&f, &trace));   // the request at step 2 is never granted
 //! assert!(mltl_eval_bottom_up(&f, &trace[..2]));
