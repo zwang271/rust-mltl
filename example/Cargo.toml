@@ -1,0 +1,14 @@
+# A minimal project that uses rust-mltl as an outside crate would.
+[package]
+name = "mltl-example"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# An outside project would write:
+# mltl = { git = "https://github.com/zwang271/rust-mltl" }
+mltl = { path = "../src/mltl" }
+
+# Empty: keeps this project out of the rust-mltl workspace.
+[workspace]

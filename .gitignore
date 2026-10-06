@@ -6,6 +6,7 @@
 
 # Rust / Cargo
 /target/
+/example/target/
 **/*.rs.bk
 
 # Editors / OS
