@@ -1,0 +1,12 @@
+[package]
+name = "r2u2-sizing"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Standalone throwaway spike, not part of the rust-mltl workspace.
+[workspace]
+
+[profile.release]
+debug = false
+opt-level = 3
