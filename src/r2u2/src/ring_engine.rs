@@ -7,7 +7,9 @@
 //! that is the monitor's output.
 //!
 //! Queue sizes ([`child_slots`]): the child of a NOT gets 1 slot, a child `c`
-//! of a binary node gets `wpd(operands) − bpd(c) + 1`, the root gets 1.
+//! of a binary node with sibling `s` gets `⌈(x + y)/2⌉ + 1` with
+//! `x = wpd(operands) − bpd(c)` and `y = wpd(s) − bpd(c)` (`half.rs`), the
+//! root gets 1.
 //! `ring_sim.rs` proves this monitor's output equals the history model's.
 use vstd::prelude::*;
 use mltl_core::mltl::*;
@@ -155,9 +157,22 @@ pub open spec fn child_slack<A>(w: nat, c: Mltl<A>) -> nat {
     nat_sub(w, bpd(c))
 }
 
-/// Slots for the queue of child `c`: one more than the slack.
-pub open spec fn child_slots<A>(w: nat, c: Mltl<A>) -> nat {
-    child_slack(w, c) + 1
+/// How far child `c` may be ahead of its sibling `s`: `wpd(s) − bpd(c)`
+/// (C2PO's and Isabelle's slack).
+pub open spec fn sib_slack<A>(c: Mltl<A>, s: Mltl<A>) -> nat {
+    nat_sub(wpd(s), bpd(c))
+}
+
+/// The slack of the ring of child `c` with sibling `s`: `⌈(x + y)/2⌉` for
+/// `x = child_slack`, `y = sib_slack` (`half.rs`). Equal to `x` unless `c`
+/// is the slower child.
+pub open spec fn ring_slack<A>(w: nat, c: Mltl<A>, s: Mltl<A>) -> nat {
+    (child_slack(w, c) + sib_slack(c, s) + 1) / 2
+}
+
+/// Slots for the queue of child `c` with sibling `s`: one more than the slack.
+pub open spec fn child_slots<A>(w: nat, c: Mltl<A>, s: Mltl<A>) -> nat {
+    ring_slack(w, c, s) + 1
 }
 
 /// `wpd` of the operands of a node for `f` (the larger one, for two operands).
@@ -177,7 +192,7 @@ pub open spec fn initial_rnode(size: nat, tau: nat, lb: nat, ub: nat) -> RNode {
 
 /// `parse_tree_with_SCQ` with ring sizes: this node gets `size` slots; the
 /// child of a NOT gets 1 slot (NOT always reads everything its child wrote),
-/// each child `c` of a binary node gets `child_slots(wpd(operands), c)`.
+/// each child `c` of a binary node gets `child_slots(wpd(operands), c, sibling)`.
 pub open spec fn parse_tree_with_ring<A>(f: Mltl<A>, size: nat) -> RTree<A>
     decreases f,
 {
@@ -188,21 +203,21 @@ pub open spec fn parse_tree_with_ring<A>(f: Mltl<A>, size: nat) -> RTree<A>
         Mltl::Prop(p) => MltlParseTree::Prop(initial_rnode(size, 0, 0, 0), p),
         Mltl::Not(phi) => MltlParseTree::Not(initial_rnode(size, 0, 0, 0), Box::new(parse_tree_with_ring(*phi, 1))),
         Mltl::And(phi, psi) => MltlParseTree::And(initial_rnode(size, 0, 0, 0),
-            Box::new(parse_tree_with_ring(*phi, child_slots(w, *phi))),
-            Box::new(parse_tree_with_ring(*psi, child_slots(w, *psi)))),
+            Box::new(parse_tree_with_ring(*phi, child_slots(w, *phi, *psi))),
+            Box::new(parse_tree_with_ring(*psi, child_slots(w, *psi, *phi)))),
         Mltl::Or(phi, psi) => MltlParseTree::Or(initial_rnode(size, 0, 0, 0),
-            Box::new(parse_tree_with_ring(*phi, child_slots(w, *phi))),
-            Box::new(parse_tree_with_ring(*psi, child_slots(w, *psi)))),
+            Box::new(parse_tree_with_ring(*phi, child_slots(w, *phi, *psi))),
+            Box::new(parse_tree_with_ring(*psi, child_slots(w, *psi, *phi)))),
         Mltl::Future(a, b, phi) => MltlParseTree::Future(initial_rnode(size, a as nat, a as nat, b as nat), a, b,
             Box::new(parse_tree_with_ring(*phi, 1))),
         Mltl::Global(a, b, phi) => MltlParseTree::Global(initial_rnode(size, a as nat, a as nat, b as nat), a, b,
             Box::new(parse_tree_with_ring(*phi, 1))),
         Mltl::Until(phi, a, b, psi) => MltlParseTree::Until(initial_rnode(size, a as nat, a as nat, b as nat),
-            Box::new(parse_tree_with_ring(*phi, child_slots(w, *phi))), a, b,
-            Box::new(parse_tree_with_ring(*psi, child_slots(w, *psi)))),
+            Box::new(parse_tree_with_ring(*phi, child_slots(w, *phi, *psi))), a, b,
+            Box::new(parse_tree_with_ring(*psi, child_slots(w, *psi, *phi)))),
         Mltl::Release(phi, a, b, psi) => MltlParseTree::Release(initial_rnode(size, a as nat, a as nat, b as nat),
-            Box::new(parse_tree_with_ring(*phi, child_slots(w, *phi))), a, b,
-            Box::new(parse_tree_with_ring(*psi, child_slots(w, *psi)))),
+            Box::new(parse_tree_with_ring(*phi, child_slots(w, *phi, *psi))), a, b,
+            Box::new(parse_tree_with_ring(*psi, child_slots(w, *psi, *phi)))),
     }
 }
 

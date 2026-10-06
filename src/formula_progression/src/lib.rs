@@ -32,6 +32,10 @@
 //! assert_eq!(atoms.print(&g), "!(!true | F[0,2] !p)");
 //! # Ok::<(), mltl::Error>(())
 //! ```
+// A plain `cargo build` erases proof code, so proof-only imports, parameters
+// and fields look unused. Verus runs (`cfg(verus_only)`) still report them.
+#![cfg_attr(not(verus_only), allow(unused_imports, unused_variables, dead_code,
+    while_true, non_shorthand_field_patterns))]
 pub mod algorithm;
 pub mod correctness;
 pub mod simp;

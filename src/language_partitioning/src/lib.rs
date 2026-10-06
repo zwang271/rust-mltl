@@ -28,6 +28,10 @@
 //! # Ok::<(), mltl::Error>(())
 //! ```
 // Isabelle names (`LP_mltl`, `And_mltl_list`, …) are kept (D20).
+// A plain `cargo build` erases proof code, so proof-only imports, parameters
+// and fields look unused. Verus runs (`cfg(verus_only)`) still report them.
+#![cfg_attr(not(verus_only), allow(unused_imports, unused_variables, dead_code,
+    while_true, non_shorthand_field_patterns))]
 #![allow(non_snake_case)]
 pub mod ext;
 pub mod composition;

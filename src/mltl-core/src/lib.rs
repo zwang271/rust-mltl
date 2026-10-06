@@ -10,6 +10,10 @@
 //! let f = atoms.parse("!(p U[0,3] q)")?;
 //! assert_eq!(atoms.print(&mltl::nnf(&f)), "!p R[0,3] !q");
 //! ```
+// A plain `cargo build` erases proof code, so proof-only imports, parameters
+// and fields look unused. Verus runs (`cfg(verus_only)`) still report them.
+#![cfg_attr(not(verus_only), allow(unused_imports, unused_variables, dead_code,
+    while_true, non_shorthand_field_patterns))]
 pub mod mltl;
 pub mod properties;
 pub mod parse_tree;

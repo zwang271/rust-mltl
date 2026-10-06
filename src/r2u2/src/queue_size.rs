@@ -16,8 +16,9 @@
 //!
 //! This bound is uniform over a node's children. `tight.rs` sharpens it per
 //! child (a child `c` cannot have covered more than `(n + 1) − bpd(c)`, and a
-//! NOT always reads everything its child wrote), which is what the ring layer
-//! actually uses (`ring_engine.rs : child_slots`).
+//! NOT always reads everything its child wrote); `half.rs` halves the part a
+//! slower child adds over its sibling. The ring layer uses both
+//! (`ring_engine.rs : child_slots`).
 use vstd::prelude::*;
 use mltl_core::mltl::*;
 use mltl_core::parse_tree::*;

@@ -4,7 +4,7 @@ What is currently decided, grouped by topic, with the reason. This is a
 register, not a log: when a decision changes, edit the entry; delete entries
 that no longer matter (git keeps the history). Each entry is a few lines:
 the decision, why, and what it means for future work. IDs are stable anchors
-for cross-references; give new entries the next free number (next: D50).
+for cross-references; give new entries the next free number (next: D56).
 
 ## Repository, docs and process
 
@@ -125,7 +125,17 @@ for cross-references; give new entries the next free number (next: D50).
   for the algorithm as Isabelle/Rust define it (UNTIL's skip reports no
   progress); a variant reporting progress was considered and proved too, but
   is not needed and was dropped (it only emits some verdicts earlier).
+- **D55 — R2U2 queue sizes: C2PO's term plus half of the extra** (owner
+  asked 2026-10-05 "go ahead and prove the rule"; proved the same day,
+  supersedes D50). Child `c` of AND/UNTIL with sibling `s`:
+  `⌈(x + y)/2⌉ + 1`, `x = max(wpd(operands) − bpd(c), 0)` (D50's slack),
+  `y = max(wpd(s) − bpd(c), 0)` (C2PO's). Child of NOT and root: 1. Equal to
+  D50 unless `c` is the slower child. Found by the sizing spike
+  (`verification/spikes/r2u2-sizing/`: never beaten, reached exactly,
+  `⌊⌋` beaten); ≈ 1.19× C2PO's total there vs D50's 1.38×. Proof:
+  `half.rs` (potential `psi`, invariant `half_inv`). Mutation `⌊⌋` → 2 errors.
 - **D50 — R2U2 queue sizes: per-child `max(wpd(operands) − bpd(c), 0) + 1`**
+  (superseded by D55 2026-10-05)
   (owner asked 2026-10-04 "how aggressively can we optimize our bounds down
   to as close as R2U2's as possible without being wrong"; proved the same
   day). Child of a NOT: 1 slot. Child `c` of AND/UNTIL: that formula, with

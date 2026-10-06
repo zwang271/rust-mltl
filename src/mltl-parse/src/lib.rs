@@ -36,6 +36,10 @@
 //! let e = mltl_parse::parse_str(text).unwrap_err();
 //! println!("{}", e.render(text.as_bytes(), "<input>"));
 //! ```
+// A plain `cargo build` erases proof code, so proof-only imports, parameters
+// and fields look unused. Verus runs (`cfg(verus_only)`) still report them.
+#![cfg_attr(not(verus_only), allow(unused_imports, unused_variables, dead_code,
+    while_true, non_shorthand_field_patterns))]
 pub mod lexer;
 pub mod grammar;
 pub mod parser;

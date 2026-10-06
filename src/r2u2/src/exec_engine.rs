@@ -427,13 +427,17 @@ pub fn operands_wpd_ex(f: &Mltl<usize>) -> (r: Option<usize>)
     }
 }
 
-/// Executable `child_slots`.
-pub fn child_slots_ex(w: usize, c: &Mltl<usize>) -> (r: Option<usize>)
+/// Executable `child_slots` (child `c`, sibling `s`).
+pub fn child_slots_ex(w: usize, c: &Mltl<usize>, s: &Mltl<usize>) -> (r: Option<usize>)
     ensures
-        r.is_some() ==> r.unwrap() == child_slots(w as nat, *c),
+        r.is_some() ==> r.unwrap() == child_slots(w as nat, *c, *s),
 {
     let b = bpd_ex(c)?;
-    (if w >= b { w - b } else { 0 }).checked_add(1)
+    let ws = wpd_ex(s)?;
+    let x = if w >= b { w - b } else { 0 };
+    let y = if ws >= b { ws - b } else { 0 };
+    let sum = x.checked_add(y)?.checked_add(1)?;
+    (sum / 2).checked_add(1)
 }
 
 fn initial_ex_node(size: usize, tau: usize, lb: usize, ub: usize) -> (d: ExNode)
@@ -449,6 +453,8 @@ fn initial_ex_node(size: usize, tau: usize, lb: usize, ub: usize) -> (d: ExNode)
 }
 
 /// `parse_tree_with_ring f size`, executed (`None` on overflow).
+#[verifier::spinoff_prover]
+#[verifier::rlimit(100)]
 pub fn init_ex(f: &Mltl<usize>, size: usize) -> (r: Option<ExTree>)
     requires
         size > 0,
@@ -466,14 +472,14 @@ pub fn init_ex(f: &Mltl<usize>, size: usize) -> (r: Option<ExTree>)
         },
         Mltl::And(phi, psi) => {
             let w = operands_wpd_ex(f)?;
-            let l = init_ex(phi, child_slots_ex(w, phi)?)?;
-            let r = init_ex(psi, child_slots_ex(w, psi)?)?;
+            let l = init_ex(phi, child_slots_ex(w, phi, psi)?)?;
+            let r = init_ex(psi, child_slots_ex(w, psi, phi)?)?;
             Some(MltlParseTree::And(initial_ex_node(size, 0, 0, 0), Box::new(l), Box::new(r)))
         },
         Mltl::Or(phi, psi) => {
             let w = operands_wpd_ex(f)?;
-            let l = init_ex(phi, child_slots_ex(w, phi)?)?;
-            let r = init_ex(psi, child_slots_ex(w, psi)?)?;
+            let l = init_ex(phi, child_slots_ex(w, phi, psi)?)?;
+            let r = init_ex(psi, child_slots_ex(w, psi, phi)?)?;
             Some(MltlParseTree::Or(initial_ex_node(size, 0, 0, 0), Box::new(l), Box::new(r)))
         },
         Mltl::Future(a, b, phi) => {
@@ -486,14 +492,14 @@ pub fn init_ex(f: &Mltl<usize>, size: usize) -> (r: Option<ExTree>)
         },
         Mltl::Until(phi, a, b, psi) => {
             let w = operands_wpd_ex(f)?;
-            let l = init_ex(phi, child_slots_ex(w, phi)?)?;
-            let r = init_ex(psi, child_slots_ex(w, psi)?)?;
+            let l = init_ex(phi, child_slots_ex(w, phi, psi)?)?;
+            let r = init_ex(psi, child_slots_ex(w, psi, phi)?)?;
             Some(MltlParseTree::Until(initial_ex_node(size, *a, *a, *b), Box::new(l), *a, *b, Box::new(r)))
         },
         Mltl::Release(phi, a, b, psi) => {
             let w = operands_wpd_ex(f)?;
-            let l = init_ex(phi, child_slots_ex(w, phi)?)?;
-            let r = init_ex(psi, child_slots_ex(w, psi)?)?;
+            let l = init_ex(phi, child_slots_ex(w, phi, psi)?)?;
+            let r = init_ex(psi, child_slots_ex(w, psi, phi)?)?;
             Some(MltlParseTree::Release(initial_ex_node(size, *a, *a, *b), Box::new(l), *a, *b, Box::new(r)))
         },
     }
@@ -708,6 +714,7 @@ pub proof fn monitor_correct(m: &Monitor, pi: Seq<Set<usize>>)
     crate::promptness::lemma_initial_ready(c);
     crate::queue_size::lemma_initial_nodes_ready(c);
     crate::tight::lemma_initial_tight(c);
+    crate::half::lemma_initial_half(c);
     let rt = initial_tree_spec(phi);
     lemma_run_r_prefix(rt, m.trace@, pi, k);
     crate::ring_sim::lemma_sim_run(rt, 1, pi, k);

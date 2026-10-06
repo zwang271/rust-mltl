@@ -1,9 +1,10 @@
 //! The ring monitor computes exactly what the history monitor computes
 //! ([`r2u2_ring_eq`]), so soundness and promptness hold for it
 //! ([`r2u2_ring_correct`]) with [`child_slots`] slots per child queue: 1 for
-//! the child of a NOT, `w − bpd(c) + 1` for a child `c` of a binary node
-//! (`w = wpd(operands)` of the reader). Write `w_c = w − bpd(c)` for the
-//! child's slack, so its ring has `w_c + 1` slots.
+//! the child of a NOT, `⌈(x + y)/2⌉ + 1` for a child `c` of a binary node,
+//! with `x = w − bpd(c)` (`w = wpd(operands)` of the reader) and
+//! `y = wpd(sibling) − bpd(c)`. Write `w_c` for this slack ([`ring_slack`]),
+//! so the ring has `w_c + 1` slots.
 //!
 //! Pointer invariant ([`ptr_inv`]) before each pass of step `n`, with the
 //! child's coverage bound `cap = (n + 1) − bpd(c)` as `m` (`tight.rs`:
@@ -14,11 +15,13 @@
 //! nothing stored and `j` is the last entry.
 //!
 //! Each read leaves the pointer at the first needed entry or the last one.
-//! For a child of a binary node the backlog is at most `cap − tau ≤ w_c + 1`
-//! (`queue_size.rs`), using `tau ≥ n − w` (promptness). In the last pass of a
-//! step every reader already reads at `(n + 1) − w`
+//! The read must have room (`half.rs : room`): at most `w_c` entries needed,
+//! or `w_c + 1` with the child at `cap`. When `x = y` the backlog is at most
+//! `cap − tau ≤ x + 1` (`queue_size.rs`), using `tau ≥ n − w` (promptness);
+//! in the last pass of a step every reader already reads at `(n + 1) − w`
 //! (`queue_size.rs : lemma_last_ready`), which is what the next step's bound
-//! `cap + 1` needs. For the child of a NOT the reader is always at or past
+//! `cap + 1` needs. When `c` is the slower child (`x > y`) the room comes from
+//! the potential of `half.rs` ([`lemma_child_rooms`]). For the child of a NOT the reader is always at or past
 //! everything the child wrote (`tight.rs`: [`not_caught`]), so only the
 //! child's newest entry can still be needed and one slot is enough
 //! ([`lemma_child_read_caught`]).
@@ -37,6 +40,7 @@ use crate::queue_size::*;
 use crate::ring::*;
 use crate::ring_engine::*;
 use crate::tight::*;
+use crate::half::*;
 
 verus! {
 
@@ -266,8 +270,8 @@ proof fn lemma_small_mod_0(size: nat)
     vstd::arithmetic::div_mod::lemma_small_mod(0, size);
 }
 
-/// After a read by a reader at `tau ≥ cap − (w + 1)` of a child that covers
-/// at most `cap`: the pointer (at the first needed entry, or the last)
+/// After a read that had room (`half.rs : room`) in a child that covers at
+/// most `cap`: the pointer (at the first needed entry, or the last)
 /// satisfies the invariant for `m = cap`.
 pub proof fn lemma_ptr_after_read(c: Seq<Verdict>, size: nat, tau: nat, tau2: nat, w: nat, cap: nat, cov: nat)
     requires
@@ -277,7 +281,7 @@ pub proof fn lemma_ptr_after_read(c: Seq<Verdict>, size: nat, tau: nat, tau2: na
         size > 0,
         next_after(c) == cov,
         cov <= cap,
-        tau >= nat_sub(cap, w + 1),
+        room(c, tau, w, cap),
     ensures
         ({
             let j2: nat = if first_idx(c, tau) < c.len() { first_idx(c, tau) } else { (c.len() - 1) as nat };
@@ -288,9 +292,6 @@ pub proof fn lemma_ptr_after_read(c: Seq<Verdict>, size: nat, tau: nat, tau2: na
     lemma_first_idx_mono(c, tau, tau2);
     let j2: nat = if first_idx(c, tau) < c.len() { first_idx(c, tau) } else { (c.len() - 1) as nat };
     vstd::arithmetic::div_mod::lemma_mod_pos_bound(j2 as int, size as int);
-    if first_idx(c, tau) < c.len() {
-        lemma_time_gap(c, j2 as int, c.len() - 1);
-    }
 }
 
 /// After a read by a reader that was, and stays, at or past everything the
@@ -351,9 +352,9 @@ pub open spec fn rtree_inv<A>(t: RTree<A>, size: nat, m: nat) -> bool
             let w = operands_wpd(*l, *r);
             let fl = mltl_parse_tree_to_mltl_spec(*l);
             let fr = mltl_parse_tree_to_mltl_spec(*r);
-            &&& ptr_inv(d.rd_left, get_aux_data(*l), d.next_time, child_slack(w, fl), nat_sub(m, bpd(fl)))
-            &&& ptr_inv(d.rd_right, get_aux_data(*r), d.next_time, child_slack(w, fr), nat_sub(m, bpd(fr)))
-            &&& rtree_inv(*l, child_slots(w, fl), m) && rtree_inv(*r, child_slots(w, fr), m)
+            &&& ptr_inv(d.rd_left, get_aux_data(*l), d.next_time, ring_slack(w, fl, fr), nat_sub(m, bpd(fl)))
+            &&& ptr_inv(d.rd_right, get_aux_data(*r), d.next_time, ring_slack(w, fr, fl), nat_sub(m, bpd(fr)))
+            &&& rtree_inv(*l, child_slots(w, fl, fr), m) && rtree_inv(*r, child_slots(w, fr, fl), m)
         },
         _ => true,
     }
@@ -467,11 +468,12 @@ pub proof fn lemma_child_read<A>(c: RTree<A>, c2: RTree<A>, rd: nat, tau: nat, t
         get_aux_data(c2).all_values == get_aux_data(c).all_values
             || get_aux_data(c2).all_values == get_aux_data(c).all_values.push(get_aux_data(c2).all_values.last()),
         tau <= tau2,
-        tau >= nat_sub(cap, w + 1),
+        room(compact(get_aux_data(c2).all_values), tau, w, cap),
     ensures
         ring_read(get_ring(c2), rd, tau).0 == first_from(compact(get_aux_data(c2).all_values), tau),
         ptr_inv(ring_read(get_ring(c2), rd, tau).1, get_aux_data(c2), tau2, w, cap),
-        tau >= nat_sub(cap2, w + 1) ==> ptr_inv(ring_read(get_ring(c2), rd, tau).1, get_aux_data(c2), tau2, w, cap2),
+        room(compact(get_aux_data(c2).all_values), tau, w, cap2)
+            ==> ptr_inv(ring_read(get_ring(c2), rd, tau).1, get_aux_data(c2), tau2, w, cap2),
 {
     let d2 = get_aux_data(c2);
     let size = w + 1;
@@ -485,7 +487,7 @@ pub proof fn lemma_child_read<A>(c: RTree<A>, c2: RTree<A>, rd: nat, tau: nat, t
         let j2: nat = if first_idx(c2c, tau) < c2c.len() { first_idx(c2c, tau) } else { (c2c.len() - 1) as nat };
         lemma_ptr_after_read(c2c, size, tau, tau2, w, cap, next_after(h2));
         assert(ptr_at(j2, ring_read(get_ring(c2), rd, tau).1, c2c, size, tau2, w, cap, next_after(h2)));
-        if tau >= nat_sub(cap2, w + 1) {
+        if room(c2c, tau, w, cap2) {
             lemma_ptr_after_read(c2c, size, tau, tau2, w, cap2, next_after(h2));
             assert(ptr_at(j2, ring_read(get_ring(c2), rd, tau).1, c2c, size, tau2, w, cap2, next_after(h2)));
         }
@@ -544,12 +546,19 @@ pub proof fn lemma_store_ok(d: RNode, q: Scq, size: nat)
     }
 }
 
+/// The last pass of a step: no progress, every reader ready for the next step.
+pub open spec fn last_cond<A>(t: Tree<A>, s: Set<A>, n: nat, progress: LoopProgress) -> bool {
+    &&& progress == LoopProgress::ReloopNoProgress
+    &&& mltl_update(t, s, n, progress).1 == LoopProgress::ReloopNoProgress
+    &&& nodes_ready(t, n + 1)
+}
+
 /// What the induction gives for a child: its pass is simulated.
 pub open spec fn sim_ok<A>(c: RTree<A>, size: nat, s: Set<A>, n: nat, progress: LoopProgress) -> bool {
     &&& abs_tree(mltl_update_r(c, s, n, progress).0) == mltl_update(abs_tree(c), s, n, progress).0
     &&& mltl_update_r(c, s, n, progress).1 == mltl_update(abs_tree(c), s, n, progress).1
     &&& rtree_inv(mltl_update_r(c, s, n, progress).0, size, n + 1)
-    &&& nodes_ready(abs_tree(c), n + 1) ==> rtree_inv(mltl_update_r(c, s, n, progress).0, size, n + 2)
+    &&& last_cond(abs_tree(c), s, n, progress) ==> rtree_inv(mltl_update_r(c, s, n, progress).0, size, n + 2)
 }
 
 /// The facts about the history side that the simulation of a pass needs.
@@ -559,6 +568,7 @@ pub open spec fn hist_pre<A>(t: Tree<A>, pi: Seq<Set<A>>, n: nat, progress: Loop
     &&& not_caught(t)
     &&& nodes_ready(t, n)
     &&& tree_prompt(t, n)
+    &&& half_inv(t, n + 1)
     &&& n < pi.len()
 }
 
@@ -716,7 +726,9 @@ pub proof fn lemma_sim_not<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat, p
     assert(rnode_ok(nd, size));
     lemma_update_r_shape(c, s, n, progress);
     assert(rtree_inv(MltlParseTree::Not(nd, Box::new(c2)), size, n + 1));
-    if nodes_ready(at, n + 1) {
+    if last_cond(at, s, n, progress) {
+        lemma_propagate_progress_2(mltl_update(abs_tree(c), s, n, progress).1, p);
+        assert(last_cond(abs_tree(c), s, n, progress));
         assert(rtree_inv(MltlParseTree::Not(nd, Box::new(c2)), size, n + 2));
     }
 }
@@ -729,9 +741,9 @@ pub proof fn lemma_sim_and<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat, p
         rtree_inv(t, size, n + 1),
         hist_pre(abs_tree(t), pi, n, progress),
         sim_ok(*t->And_1, child_slots(operands_wpd(*t->And_1, *t->And_2),
-            mltl_parse_tree_to_mltl_spec(*t->And_1)), pi[n as int], n, progress),
+            mltl_parse_tree_to_mltl_spec(*t->And_1), mltl_parse_tree_to_mltl_spec(*t->And_2)), pi[n as int], n, progress),
         sim_ok(*t->And_2, child_slots(operands_wpd(*t->And_1, *t->And_2),
-            mltl_parse_tree_to_mltl_spec(*t->And_2)), pi[n as int], n, progress),
+            mltl_parse_tree_to_mltl_spec(*t->And_2), mltl_parse_tree_to_mltl_spec(*t->And_1)), pi[n as int], n, progress),
     ensures
         sim_ok(t, size, pi[n as int], n, progress),
 {
@@ -740,7 +752,7 @@ pub proof fn lemma_sim_and<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat, p
     let (l, r) = (*t->And_1, *t->And_2);
     let w = operands_wpd(l, r);
     let (fl, fr) = (mltl_parse_tree_to_mltl_spec(l), mltl_parse_tree_to_mltl_spec(r));
-    let (wl, wr) = (child_slack(w, fl), child_slack(w, fr));
+    let (wl, wr) = (ring_slack(w, fl, fr), ring_slack(w, fr, fl));
     lemma_abs_shape(t);
     lemma_abs_shape(l);
     lemma_abs_shape(r);
@@ -758,10 +770,8 @@ pub proof fn lemma_sim_and<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat, p
     lemma_and_step(rscq(d), get_scq_from_tree(l2h), get_scq_from_tree(r2h), mltl_parse_tree_to_mltl_spec(l),
         mltl_parse_tree_to_mltl_spec(r), pi, n + 1, progress);
     let (q, p) = and_op(rscq(d), get_scq_from_tree(l2h), get_scq_from_tree(r2h), progress);
-    lemma_cap_slack(n + 1, w, bpd(fl));
-    lemma_cap_slack(n + 1, w, bpd(fr));
-    lemma_cap_slack(n + 2, w, bpd(fl));
-    lemma_cap_slack(n + 2, w, bpd(fr));
+    lemma_child_rooms(abs_tree(l), fr, w, d.next_time, pi, n, progress);
+    lemma_child_rooms(abs_tree(r), fl, w, d.next_time, pi, n, progress);
     lemma_child_read(l, l2, d.rd_left, d.next_time, q.next_time, wl, nat_sub(n + 1, bpd(fl)), nat_sub(n + 2, bpd(fl)));
     lemma_child_read(r, r2, d.rd_right, d.next_time, q.next_time, wr, nat_sub(n + 1, bpd(fr)), nat_sub(n + 2, bpd(fr)));
     lemma_store_ok(d, q, size);
@@ -782,7 +792,9 @@ pub proof fn lemma_sim_and<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat, p
     lemma_update_r_shape(l, s, n, progress);
     lemma_update_r_shape(r, s, n, progress);
     assert(rtree_inv(MltlParseTree::And(nd, Box::new(l2), Box::new(r2)), size, n + 1));
-    if nodes_ready(at, n + 1) {
+    if last_cond(at, s, n, progress) {
+        lemma_propagate_progress_3(lp, rp, p);
+        assert(last_cond(abs_tree(l), s, n, progress) && last_cond(abs_tree(r), s, n, progress));
         assert(rtree_inv(MltlParseTree::And(nd, Box::new(l2), Box::new(r2)), size, n + 2));
     }
 }
@@ -795,9 +807,9 @@ pub proof fn lemma_sim_until<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat,
         rtree_inv(t, size, n + 1),
         hist_pre(abs_tree(t), pi, n, progress),
         sim_ok(*t->Until_1, child_slots(operands_wpd(*t->Until_1, *t->Until_4),
-            mltl_parse_tree_to_mltl_spec(*t->Until_1)), pi[n as int], n, progress),
+            mltl_parse_tree_to_mltl_spec(*t->Until_1), mltl_parse_tree_to_mltl_spec(*t->Until_4)), pi[n as int], n, progress),
         sim_ok(*t->Until_4, child_slots(operands_wpd(*t->Until_1, *t->Until_4),
-            mltl_parse_tree_to_mltl_spec(*t->Until_4)), pi[n as int], n, progress),
+            mltl_parse_tree_to_mltl_spec(*t->Until_4), mltl_parse_tree_to_mltl_spec(*t->Until_1)), pi[n as int], n, progress),
     ensures
         sim_ok(t, size, pi[n as int], n, progress),
 {
@@ -806,7 +818,7 @@ pub proof fn lemma_sim_until<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat,
     let (l, r) = (*t->Until_1, *t->Until_4);
     let w = operands_wpd(l, r);
     let (fl, fr) = (mltl_parse_tree_to_mltl_spec(l), mltl_parse_tree_to_mltl_spec(r));
-    let (wl, wr) = (child_slack(w, fl), child_slack(w, fr));
+    let (wl, wr) = (ring_slack(w, fl, fr), ring_slack(w, fr, fl));
     lemma_abs_shape(t);
     lemma_abs_shape(l);
     lemma_abs_shape(r);
@@ -823,10 +835,8 @@ pub proof fn lemma_sim_until<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat,
     let r2h = mltl_update(abs_tree(r), s, n, progress).0;
     let (q, o, p) = until_op(rscq(d), get_scq_from_tree(l2h), get_scq_from_tree(r2h), d.obs, progress);
     lemma_until_next_time_mono(rscq(d), get_scq_from_tree(l2h), get_scq_from_tree(r2h), d.obs, progress);
-    lemma_cap_slack(n + 1, w, bpd(fl));
-    lemma_cap_slack(n + 1, w, bpd(fr));
-    lemma_cap_slack(n + 2, w, bpd(fl));
-    lemma_cap_slack(n + 2, w, bpd(fr));
+    lemma_child_rooms(abs_tree(l), fr, w, d.next_time, pi, n, progress);
+    lemma_child_rooms(abs_tree(r), fl, w, d.next_time, pi, n, progress);
     lemma_child_read(l, l2, d.rd_left, d.next_time, q.next_time, wl, nat_sub(n + 1, bpd(fl)), nat_sub(n + 2, bpd(fl)));
     lemma_child_read(r, r2, d.rd_right, d.next_time, q.next_time, wr, nat_sub(n + 1, bpd(fr)), nat_sub(n + 2, bpd(fr)));
     lemma_store_ok(d, q, size);
@@ -849,7 +859,9 @@ pub proof fn lemma_sim_until<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat,
     lemma_update_r_shape(l, s, n, progress);
     lemma_update_r_shape(r, s, n, progress);
     assert(rtree_inv(MltlParseTree::Until(nd, Box::new(l2), a, ub, Box::new(r2)), size, n + 1));
-    if nodes_ready(at, n + 1) {
+    if last_cond(at, s, n, progress) {
+        lemma_propagate_progress_3(lp, rp, p);
+        assert(last_cond(abs_tree(l), s, n, progress) && last_cond(abs_tree(r), s, n, progress));
         assert(rtree_inv(MltlParseTree::Until(nd, Box::new(l2), a, ub, Box::new(r2)), size, n + 2));
     }
 }
@@ -873,13 +885,13 @@ pub proof fn lemma_sim_update<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat
             lemma_sim_not(t, size, pi, n, progress);
         },
         MltlParseTree::And(_, l, r) => {
-            lemma_sim_update(*l, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*l)), pi, n, progress);
-            lemma_sim_update(*r, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*r)), pi, n, progress);
+            lemma_sim_update(*l, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*l), mltl_parse_tree_to_mltl_spec(*r)), pi, n, progress);
+            lemma_sim_update(*r, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*r), mltl_parse_tree_to_mltl_spec(*l)), pi, n, progress);
             lemma_sim_and(t, size, pi, n, progress);
         },
         MltlParseTree::Until(_, l, _, _, r) => {
-            lemma_sim_update(*l, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*l)), pi, n, progress);
-            lemma_sim_update(*r, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*r)), pi, n, progress);
+            lemma_sim_update(*l, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*l), mltl_parse_tree_to_mltl_spec(*r)), pi, n, progress);
+            lemma_sim_update(*r, child_slots(operands_wpd(*l, *r), mltl_parse_tree_to_mltl_spec(*r), mltl_parse_tree_to_mltl_spec(*l)), pi, n, progress);
             lemma_sim_until(t, size, pi, n, progress);
         },
         _ => {
@@ -904,6 +916,7 @@ pub proof fn lemma_sim_repeat<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat
         rtree_inv(repeat_mltl_update_r(t, pi[n as int], n, fuel), size, n + 2),
         cov_ub(abs_tree(repeat_mltl_update_r(t, pi[n as int], n, fuel)), n + 1),
         not_caught(abs_tree(repeat_mltl_update_r(t, pi[n as int], n, fuel))),
+        half_inv(abs_tree(repeat_mltl_update_r(t, pi[n as int], n, fuel)), n + 2),
     decreases fuel,
 {
     let no = LoopProgress::ReloopNoProgress;
@@ -916,7 +929,10 @@ pub proof fn lemma_sim_repeat<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat
     let (t2, p) = mltl_update_r(t, pi[n as int], n, no);
     if p == no {
         lemma_last_ready(at, pi, n);
+        assert(last_cond(at, pi[n as int], n, no));
+        lemma_last_half(at, pi, n);
     } else {
+        lemma_update_half(at, pi, n, no);
         lemma_update_nodes_ready(at, pi, n, no, n);
         lemma_update_prompt(at, pi, n, no, n);
         lemma_update_ready(at, pi, n, n + 1, no, n);
@@ -935,6 +951,7 @@ pub proof fn lemma_sim_step<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat)
         rtree_inv(r2u2_engine_step_r(t, pi[n as int], n), size, n + 2),
         cov_ub(abs_tree(r2u2_engine_step_r(t, pi[n as int], n)), n + 1),
         not_caught(abs_tree(r2u2_engine_step_r(t, pi[n as int], n))),
+        half_inv(abs_tree(r2u2_engine_step_r(t, pi[n as int], n)), n + 2),
 {
     let first = LoopProgress::FirstLoop;
     let at = abs_tree(t);
@@ -946,6 +963,7 @@ pub proof fn lemma_sim_step<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, n: nat)
     lemma_update_c(at, pi, n, first);
     lemma_update_cov_ub(at, pi, n, first);
     lemma_update_not_caught(at, pi, n, first);
+    lemma_update_half(at, pi, n, first);
     lemma_update_size(at, pi[n as int], n, first);
     lemma_abs_shape(t);
     let t1 = mltl_update_r(t, pi[n as int], n, first).0;
@@ -964,12 +982,14 @@ pub proof fn lemma_sim_run<A>(t: RTree<A>, size: nat, pi: Seq<Set<A>>, k: nat)
         nodes_ready(abs_tree(t), 0),
         cov_ub(abs_tree(t), 0),
         not_caught(abs_tree(t)),
+        half_inv(abs_tree(t), 1),
         k <= pi.len(),
     ensures
         abs_tree(r2u2_run_r(t, pi, k)) == r2u2_run(abs_tree(t), pi, k),
         rtree_inv(r2u2_run_r(t, pi, k), size, k + 1),
         cov_ub(r2u2_run(abs_tree(t), pi, k), k),
         not_caught(r2u2_run(abs_tree(t), pi, k)),
+        half_inv(r2u2_run(abs_tree(t), pi, k), k + 1),
     decreases k,
 {
     if k > 0 {
@@ -1010,8 +1030,8 @@ pub proof fn lemma_initial_ring<A>(f: Mltl<A>, size: nat)
         Mltl::Not(phi) => lemma_initial_ring(*phi, 1),
         Mltl::And(phi, psi) | Mltl::Until(phi, _, _, psi) => {
             let w = operands_wpd_of(f);
-            lemma_initial_ring(*phi, child_slots(w, *phi));
-            lemma_initial_ring(*psi, child_slots(w, *psi));
+            lemma_initial_ring(*phi, child_slots(w, *phi, *psi));
+            lemma_initial_ring(*psi, child_slots(w, *psi, *phi));
         },
         _ => {},
     }
@@ -1019,7 +1039,8 @@ pub proof fn lemma_initial_ring<A>(f: Mltl<A>, size: nat)
 
 /// **The ring monitor equals the history monitor.** With [`child_slots`]
 /// slots per child queue (1 for the child of a NOT and for the root,
-/// `wpd(operands) − bpd(child) + 1` for a child of a binary node), monitoring
+/// `⌈(x + y)/2⌉ + 1` for a child of a binary node, `x`, `y` as in the module
+/// comment), monitoring
 /// any `φ` (intervals `a ≤ b`) on any trace gives the same verdicts.
 pub proof fn r2u2_ring_eq<A>(phi: Mltl<A>, pi: Seq<Set<A>>)
     requires
@@ -1035,6 +1056,7 @@ pub proof fn r2u2_ring_eq<A>(phi: Mltl<A>, pi: Seq<Set<A>>)
     lemma_initial_ready(c);
     lemma_initial_nodes_ready(c);
     lemma_initial_tight(c);
+    lemma_initial_half(c);
     let rt = parse_tree_with_ring(c, 1);
     lemma_sim_run(rt, 1, pi, pi.len());
     lemma_abs_shape(r2u2_run_r(rt, pi, pi.len()));

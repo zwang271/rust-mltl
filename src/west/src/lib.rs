@@ -3,6 +3,10 @@
 //! (`WEST_Algorithms.thy`, `WEST_Proofs.thy`).
 //! Correspondence table: agent-docs/correspondence/west.md.
 // Isabelle names (`WEST_reg`, `WEST_and_state`, …) are kept (D20).
+// A plain `cargo build` erases proof code, so proof-only imports, parameters
+// and fields look unused. Verus runs (`cfg(verus_only)`) still report them.
+#![cfg_attr(not(verus_only), allow(unused_imports, unused_variables, dead_code,
+    while_true, non_shorthand_field_patterns))]
 #![allow(non_snake_case)]
 pub mod algorithms;
 pub mod matching;
