@@ -36,7 +36,7 @@ guarantee:
 | [`nnf`](src/lib.rs#L621), [`bnf`](src/lib.rs#L626) | [`convert_nnf`](../mltl-core/src/properties.rs#L2736), [`convert_bnf`](../mltl-core/src/properties.rs#L2802) |
 | [`Context::west`](src/lib.rs#L327) | [`fast_reg_checked`](../west/src/api.rs#L40): a trace at least `complen(f)` long satisfies `f` exactly when it matches one of the lines; [`trace_to_text`](../west/src/api.rs#L221) writes them |
 | [`sat`](src/lib.rs#L557) | [`solve`](../mltl-sat/src/solve.rs#L312): `Sat(t)` means `t` satisfies `f`; `Unsat` means no trace of length `complen(f)` does. CaDiCaL is not trusted: its answers are checked |
-| [`monitor`](src/lib.rs#L577), [`Monitor`](src/lib.rs#L586) | [`monitor_trace`](../r2u2/src/exec_engine.rs#L731), [`Monitor::step`](../r2u2/src/exec_engine.rs#L613): every verdict is right, and none comes later than the formula's worst-case delay |
+| [`monitor`](src/lib.rs#L577), [`Monitor`](src/lib.rs#L586) | [`monitor_trace`](../r2u2/src/exec_engine.rs#L738), [`Monitor::step`](../r2u2/src/exec_engine.rs#L619): every verdict is right, and none comes later than the formula's worst-case delay |
 
 Not verified (plain Rust, small): the wrappers themselves, the column
 header of [`Context::west`](src/lib.rs#L327), [`value_at`](src/lib.rs#L616)
